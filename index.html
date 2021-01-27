@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en" theme="system">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+
+    <meta name="description" content="Chess.js" />
+    <meta name="keywords" content="html, html5, css, css3, js, vue, vuejs" />
+    <meta name="robots" content="index" />
+    <meta name="author" content="Modscleo4" />
+
+    <title>Chess</title>
+
+    <!-- Bootstrap 4.5.2 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/css/bootstrap.min.css">
+
+    <!-- Font Awesome 4.7.0 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/themes/light.css" />
+    <link rel="stylesheet" href="css/themes/dark.css" />
+
+    <link rel="manifest" href="manifest.json" />
+
+    <link rel="icon" href="favicon.png" />
+</head>
+
+<body>
+    <script type="text/javascript" src="js/theme.js"></script>
+
+    <div id="app">
+        <div v-if="!gamemode" class="gamemodes">
+            <button type="button" class="btn btn-info" @click="gamemode = 'smp'">Multiplayer local</button>
+            <button type="button" class="btn btn-success" @click="loginServer(); gamemode = 'mp'">Multiplayer
+                online</button>
+        </div>
+
+        <div v-if="gamemode === 'mp' && !connection.canStart">
+            <p>Game ID: {{ connection.gameid }}</p>
+            <p>Waiting for Player 2...</p>
+        </div>
+
+        <div v-if="(gamemode === 'mp' && connection.canStart) || gamemode === 'smp'" class="content">
+            <div class="modal">
+
+            </div>
+
+            <div>
+
+            </div>
+
+            <table class="chessboard" :class="{'inverted': playerColor === 'black'}">
+                <tbody>
+                    <tr v-for="(board_row, i) in board" :key="i">
+                        <td :id="`cell_${i}_${j}`" v-for="(board_cell, j) in board_row" :key="j"
+                            :class="{'clickable': gamemode === 'mp' ? (board_cell?.color === playerColor && playerColor === connection.currPlayer) : board_cell?.color === color}"
+                            @dragover.prevent="dragOver(i, j)" @dragenter.prevent=""
+                            @dragend="dragEnd(board_cell, i, j)">
+                            <img v-if="board_cell" :src="`assets/${board_cell.image}.png`" alt=""
+                                :draggable="gamemode === 'mp' ? (board_cell?.color === playerColor && playerColor === connection.currPlayer) : board_cell?.color === color"
+                                @drag="dragPiece(i, j)">
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="sidebar-right">
+                <ul>
+                    <li v-for="piece in (playerColor === 'white' ? takenPiecesW : takenPiecesB)">
+                        <img :src="`assets/${piece.image}.png`" alt="" />
+                    </li>
+                </ul>
+
+                <div class="history">
+                    <span v-for="movement in movements">{{ movement }}
+                </div>
+
+                <ul>
+                    <li v-for="piece in (playerColor === 'white' ? takenPiecesB : takenPiecesW)">
+                        <img :src="`assets/${piece.image}.png`" alt="" />
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+    <script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/js/bootstrap.min.js"></script>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
