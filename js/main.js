@@ -178,7 +178,7 @@ const app = Vue.createApp({
             document.querySelector(`#cell_${i}_${j}`)?.classList.add('hover');
         },
 
-        dragEnd(board_cell, i, j) {
+        drop(board_cell, i, j) {
             this.drag.dragging = false;
             document.querySelector(`#cell_${this.drag.newI}_${this.drag.newJ}`)?.classList.remove('hover');
 
@@ -264,7 +264,7 @@ const app = Vue.createApp({
             const KingB_j = this._board[KingB_i].findIndex(p => p?.char === 'K' && p?.color === 'black');
 
             if (Chess.isChecked('white', KingW_i, KingW_j, this._board)) {
-                if (this.color === 'white') {
+                if ((this.gamemode === 'smp' ? this.color : this.connection.currPlayer) === 'white') {
                     this._board = boardCopy;
                     return;
                 } else {
@@ -273,7 +273,7 @@ const app = Vue.createApp({
             }
 
             if (Chess.isChecked('black', KingB_i, KingB_j, this._board)) {
-                if (this.color === 'black') {
+                if ((this.gamemode === 'smp' ? this.color : this.connection.currPlayer) === 'black') {
                     this._board = boardCopy;
                     return;
                 } else {
@@ -302,8 +302,8 @@ const app = Vue.createApp({
                     this.play();
                 }, 500);
 
-                this.won = (this.color === 'black');
-                this.lose = (this.color === 'white');
+                this.won = (this.gamemode === 'smp' ? this.color === 'black' : this.connection.currPlayer === 'black');
+                this.lose = (this.gamemode === 'smp' ? this.color === 'white' : this.connection.currPlayer === 'white');
                 this.draw = false;
 
                 if (this.won) {
@@ -319,8 +319,8 @@ const app = Vue.createApp({
                     this.play();
                 }, 500);
 
-                this.won = (this.color === 'white');
-                this.lose = (this.color === 'black');
+                this.won = (this.gamemode === 'smp' ? this.color === 'white' : this.connection.currPlayer === 'white');
+                this.lose = (this.gamemode === 'smp' ? this.color === 'black' : this.connection.currPlayer === 'black');
                 this.draw = false;
 
                 if (this.won) {

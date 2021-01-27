@@ -58,7 +58,7 @@
                         <td :id="`cell_${i}_${j}`" v-for="(board_cell, j) in board_row" :key="j"
                             :class="{'clickable': gamemode === 'mp' ? (board_cell?.color === playerColor && playerColor === connection.currPlayer) : board_cell?.color === color}"
                             @dragover.prevent="dragOver(i, j)" @dragenter.prevent=""
-                            @dragend="dragEnd(board_cell, i, j)">
+                            @drop.prevent="drop(board_cell, i, j)">
                             <img v-if="board_cell" :src="`assets/${board_cell.image}.png`" alt=""
                                 :draggable="gamemode === 'mp' ? (board_cell?.color === playerColor && playerColor === connection.currPlayer) : board_cell?.color === color"
                                 @drag="dragPiece(i, j)">
