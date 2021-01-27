@@ -5,7 +5,7 @@
  * @return {WebSocket}
  */
 export default function createSocket(address, commands) {
-    const socket = new WebSocket(`ws://${address}:8000`, 'chessjs');
+    const socket = new WebSocket(`wss://${address}`, 'chessjs');
 
     socket.addEventListener('message', async e => {
         const message = JSON.parse(e.data);
@@ -19,4 +19,4 @@ export default function createSocket(address, commands) {
 
 
     return socket;
-}
+};;;

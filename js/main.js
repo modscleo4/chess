@@ -14,7 +14,7 @@ const app = Vue.createApp({
     data: () => ({
         connection: {
             socket: null,
-            address: new URLSearchParams(new URL(window.location).search).get('address') ?? null,
+            address: 'chessjs-server.herokuapp.com',
             gameid: new URLSearchParams(new URL(window.location).search).get('gameid') ?? null,
             canStart: false,
             currPlayer: null,
@@ -86,11 +86,6 @@ const app = Vue.createApp({
         },
 
         async loginServer() {
-            if (!this.connection.address) {
-                const ip = prompt('Server IP (empty = chessjs-server.herokuapp.com): ');
-                this.connection.address = ip || 'chessjs-server.herokuapp.com';
-            }
-
             if (!this.connection.gameid) {
                 const gameid = prompt('Game ID (empty for a new game): ');
                 this.connection.gameid = gameid || null;
