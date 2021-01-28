@@ -182,8 +182,10 @@ const app = Vue.createApp({
             this.drag.dragging = false;
             document.querySelector(`#cell_${this.drag.newI}_${this.drag.newJ}`)?.classList.remove('hover');
 
-            if (this._board[this.drag.i][this.drag.j].char === 'P' && [0, 7].includes(this.drag.newI) && Chess.isValidMove(this._board[this.drag.i][this.drag.j], i, j, this.drag.newI, this.drag.newJ, this._board, this.lastMoved)) {
-                this.promoteTo = prompt('Promover para: ');
+            if (this._board[this.drag.i][this.drag.j].char === 'P' && [0, 7].includes(this.drag.newI) && Chess.isValidMove(this._board[this.drag.i][this.drag.j], this.drag.i, this.drag.j, this.drag.newI, this.drag.newJ, this._board, this.lastMoved)) {
+                do {
+                    this.promoteTo = prompt('Promover para: ');
+                } while (!['Q', 'B', 'N', 'R'].includes(this.promoteTo));
             }
 
             if (this.connection.socket) {
@@ -238,7 +240,7 @@ const app = Vue.createApp({
 
             capture = !!takenPiece;
 
-            const boardCopy = [...this._board.map(r => [...r])];
+            const boardCopy = this._board.map(r => [...r]);
 
             this._board[i][j] = null;
             this._board[newI][newJ] = piece;
@@ -296,7 +298,7 @@ const app = Vue.createApp({
             const moveAudio = new Audio('assets/move.ogg');
             moveAudio.play();
 
-            if (Chess.isCheckMate('white', KingW_i, KingW_j, this._board)) {
+            if (Chess.isCheckMate('white', KingW_i, KingW_j, this._board, this.lastMoved)) {
                 setTimeout(() => {
                     alert('Win: Black');
                     this.play();
@@ -313,7 +315,7 @@ const app = Vue.createApp({
                 }
 
                 checkMate = true;
-            } else if (Chess.isCheckMate('black', KingB_i, KingB_j, this._board)) {
+            } else if (Chess.isCheckMate('black', KingB_i, KingB_j, this._board, this.lastMoved)) {
                 setTimeout(() => {
                     alert('Win: White');
                     this.play();
@@ -330,7 +332,7 @@ const app = Vue.createApp({
                 }
 
                 checkMate = true;
-            } else if (Chess.isStaleMate('black', KingB_i, KingB_j, this._board) || Chess.isStaleMate('white', KingW_i, KingW_j, this._board)) {
+            } else if (Chess.isStaleMate('black', KingB_i, KingB_j, this._board, this.lastMoved) || Chess.isStaleMate('white', KingW_i, KingW_j, this._board, this.lastMoved)) {
                 setTimeout(() => {
                     alert('Draw');
                     this.play();
@@ -397,7 +399,7 @@ const app = Vue.createApp({
             mov += `${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][newJ]}${1 + newI}`;
 
             if (enPassant) {
-                mov += 'e.p';
+                mov += ' e.p';
             }
 
             if (checkMate) {
@@ -407,7 +409,7 @@ const app = Vue.createApp({
             } else if (castling) {
                 this.movements.push(['0-0', '0-0-0'][castling - 1]);
             } else if (promotion) {
-                this.movements.push(`${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][newJ]}${1 + newI}${piece.char}`);
+                this.movements.push(`${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][newJ]}${1 + newI}${this.promoteTo}`);
             } else {
                 this.movements.push(mov);
             }
