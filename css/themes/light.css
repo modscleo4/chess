@@ -1,7 +1,7 @@
 :root[theme="light"] {
     --background-color: rgba(239, 239, 239, 0.9);
-    --bg-gradient-start: rgb(13, 91, 143);
-    --bg-gradient-end: rgb(31, 57, 206);
+    --bg-gradient-start: rgb(51, 51, 51);
+    --bg-gradient-end: rgb(35, 35, 35);
     --card-color: rgb(253, 253, 253);
     --body-color: rgb(83, 30, 180);
 
@@ -35,8 +35,8 @@
 @media (prefers-color-scheme: light) {
     :root[theme="system"] {
         --background-color: rgba(239, 239, 239, 0.9);
-        --bg-gradient-start: rgb(13, 91, 143);
-        --bg-gradient-end: rgb(31, 57, 206);
+        --bg-gradient-start: rgb(51, 51, 51);
+        --bg-gradient-end: rgb(35, 35, 35);
         --card-color: rgb(253, 253, 253);
         --body-color: rgb(83, 30, 180);
 

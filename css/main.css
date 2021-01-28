@@ -162,11 +162,13 @@ table.chessboard {
     font-family: monospace;
     user-select: none;
     background-color: var(--background-color);/*rgba(255, 255, 255, 0.05);*/
-    transition: transform 200ms ease;
+    transition: all 200ms ease;
+    box-shadow:  2px 2px 10px 0 rgb(16, 16, 16);
 }
 
 table.chessboard.inverted {
     transform: rotate(180deg);
+    box-shadow:  -2px -2px 10px 0 rgb(16, 16, 16);
 }
 
 table.chessboard.inverted tr td img {
@@ -186,7 +188,7 @@ table.chessboard tr td.clickable {
 
 table.chessboard tr td img {
     pointer-events: none;
-    transition: transform, opacity 200ms ease;
+    transition: all 200ms ease;
 }
 
 table.chessboard tr td.clickable img {

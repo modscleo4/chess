@@ -368,7 +368,7 @@ const app = Vue.createApp({
             const moveAudio = new Audio('assets/move.ogg');
             moveAudio.play();
 
-            if (Chess.isCheckMate('white', KingW_i, KingW_j, this.game.board, this.lastMoved)) {
+            if (Chess.isCheckMate('white', KingW_i, KingW_j, this.game.board, this.game.lastMoved)) {
                 setTimeout(() => {
                     alert('Win: Black');
                     this.play();
@@ -385,7 +385,7 @@ const app = Vue.createApp({
                 }
 
                 checkMate = true;
-            } else if (Chess.isCheckMate('black', KingB_i, KingB_j, this.game.board, this.lastMoved)) {
+            } else if (Chess.isCheckMate('black', KingB_i, KingB_j, this.game.board, this.game.lastMoved)) {
                 setTimeout(() => {
                     alert('Win: White');
                     this.play();
@@ -495,7 +495,7 @@ const app = Vue.createApp({
                 this.game.playerColor = this.game.currPlayer;
             }
 
-            this.lastMoved = piece;
+            this.game.lastMoved = piece;
 
             this.game.currentMove = [[i, j], [newI, newJ]];
         },
