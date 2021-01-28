@@ -78,12 +78,23 @@ const app = Vue.createApp({
 
     methods: {
         play() {
+            if (this.game.movements.length > 0) {
+                const games = JSON.parse(localStorage.getItem('gameHistory') ?? '[]');
+                games.push({won: this.game.won, lost: this.game.lost, draw: this.game.draw, gamemode: this.game.gamemode, movements: this.game.movements, result: this.game.result});
+
+                localStorage.setItem('gameHistory', JSON.stringify(games));
+            }
+
             this.game.gamemode = null;
             this.game.won = false;
             this.game.lost = false;
             this.game.draw = false;
+            this.game.lastMoved = null;
             this.game.takenPieces = [];
             this.game.movements = [];
+            this.game.currentMove = [];
+            this.game.noCaptureOrPawnsQ = 0;
+            this.game.result = null;
             this.connection.canStart = false;
             this.regenerateArray();
         },
