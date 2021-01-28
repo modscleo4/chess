@@ -180,10 +180,36 @@ table.chessboard tr td {
     width: 4rem;
     height: 4rem;
     text-align: center;
+    position: relative;
 }
 
 table.chessboard tr td.clickable {
     cursor: pointer;
+}
+
+table.chessboard tr td .file {
+    position: absolute;
+    padding: 0;
+    margin: 0;
+    bottom: -2px;
+    left: 2px;
+    font-size: 0.45em;
+    transition: all 200ms ease;
+}
+
+table.chessboard tr td .rank {
+    position: absolute;
+    padding: 0;
+    margin: 0;
+    top: -2px;
+    right: 2px;
+    font-size: 0.45em;
+    transition: all 200ms ease;
+}
+
+table.chessboard.inverted tr td .file,
+table.chessboard.inverted tr td .rank {
+    transform: rotate(-180deg);
 }
 
 table.chessboard tr td img {

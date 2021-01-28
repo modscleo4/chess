@@ -14,7 +14,7 @@ const app = Vue.createApp({
     data: () => ({
         connection: {
             socket: null,
-            address: 'chessjs-server.herokuapp.com',
+            address: 'localhost',
             gameid: new URLSearchParams(new URL(window.location).search).get('gameid') ?? null,
             canStart: false,
         },
@@ -113,7 +113,8 @@ const app = Vue.createApp({
 
             const commands = {
                 commitMovement: async (message) => {
-                    const {i, j, newI, newJ, game: {currPlayer}} = message;
+                    const {i, j, newI, newJ, game: {currPlayer, promoteTo}} = message;
+                    this.game.promoteTo = promoteTo;
                     this.commitMovement(i, j, newI, newJ);
 
                     this.game.currPlayer = currPlayer;
@@ -455,7 +456,7 @@ const app = Vue.createApp({
             }
 
             if (duplicate?.y === j) {
-                mov += 1 + i;
+                mov += 8 - i;
             }
 
             if (capture) {
@@ -466,7 +467,7 @@ const app = Vue.createApp({
                 mov += 'x';
             }
 
-            mov += `${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][newJ]}${1 + newI}`;
+            mov += `${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][newJ]}${8 - newI}`;
 
             if (enPassant) {
                 mov += ' e.p';

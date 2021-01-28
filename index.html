@@ -61,6 +61,8 @@
                             @dragenter.prevent="" @drop.prevent="drop(board_cell, i, j)" @contextmenu.prevent
                             @mousedown.right="startArrow(i, j)" @mousemove="moveArrow(i, j)"
                             @mouseup.right="endArrow(i, j)">
+                            <span v-if="i === 7" class="file">{{ ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j] }}</span>
+                            <span v-if="j === 7" class="rank">{{ 8 - i }}</span>
                             <img v-if="board_cell" :src="`assets/${board_cell.image}.png`" alt=""
                                 :draggable="(board_cell?.color === game.playerColor && game.playerColor === game.currPlayer)"
                                 @drag="dragPiece(i, j)" @dragend="dragEnd(i, j)">
