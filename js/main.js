@@ -449,14 +449,17 @@ const app = Vue.createApp({
                 this.game.result = '½–½';
             }
 
-            const duplicate = Chess.findDuplicateMovement(piece, newI, newJ, this.game.board, this.game.lastMoved);
+            const duplicate = Chess.findDuplicateMovement(piece, newI, newJ, boardCopy, this.game.lastMoved);
             let mov = `${piece.char !== 'P' ? piece.char : ''}`;
-            if (duplicate?.x === i) {
-                mov += ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j];
-            }
 
-            if (duplicate?.y === j) {
-                mov += 8 - i;
+            if (duplicate) {
+                if (duplicate?.x !== i) {
+                    mov += ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j];
+                } else if (duplicate?.y === j) {
+                    mov += 8 - i;
+                } else {
+                    mov += `${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j]}${8 - i}`;
+                }
             }
 
             if (capture) {
