@@ -14,7 +14,7 @@ const app = Vue.createApp({
     data: () => ({
         connection: {
             socket: null,
-            address: 'localhost',
+            address: 'chessjs-server.herokuapp.com',
             gameid: new URLSearchParams(new URL(window.location).search).get('gameid') ?? null,
             canStart: false,
         },
