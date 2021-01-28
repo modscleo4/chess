@@ -156,7 +156,7 @@ table.chessboard {
     font-family: monospace;
     user-select: none;
     background-color: var(--background-color);/*rgba(255, 255, 255, 0.05);*/
-    transition: transform 100ms ease;
+    transition: transform 200ms ease;
 }
 
 table.chessboard.inverted {
@@ -164,7 +164,7 @@ table.chessboard.inverted {
 }
 
 table.chessboard.inverted tr td img {
-    transform: rotate(180deg);
+    transform: rotate(-180deg);
 }
 
 table.chessboard tr td {
@@ -180,10 +180,15 @@ table.chessboard tr td.clickable {
 
 table.chessboard tr td img {
     pointer-events: none;
+    transition: transform, opacity 200ms ease;
 }
 
 table.chessboard tr td.clickable img {
     pointer-events: unset;
+}
+
+table.chessboard tr td.moving img {
+    opacity: 0.1;
 }
 
 table.chessboard tr:nth-child(even) td:nth-child(even) {
@@ -206,6 +211,14 @@ table.chessboard tr:nth-child(odd) td:nth-child(odd) {
     color: var(--odd);
 }
 
+table.chessboard tr td.moved {
+    background-color: rgb(44, 204, 151) !important;
+}
+
+table.chessboard tr td.checked {
+    background-color: rgb(212, 0, 0) !important;
+}
+
 table.chessboard tr td.hover {
     background-color: rgb(33, 147, 240) !important;
 }
@@ -214,7 +227,6 @@ table.chessboard tr td.hover {
     display: grid;
     grid-template-rows: auto 300px auto;
     align-self: center;
-    padding: 8px;
     grid-row-gap: 32px;
     background-color: var(--card-opaque-bg);
 }
@@ -222,11 +234,24 @@ table.chessboard tr td.hover {
 .sidebar-right ul {
     list-style: none;
     margin: 0;
-    padding: 0;
+    padding: 8px;
 }
 
 .sidebar-right ul li {
     display: inline;
+}
+
+.sidebar-right .player-name {
+    font-size: 1em;
+    text-align: center;
+    font-weight: bold;
+    background-color: var(--card-opaque-bg);
+    margin: 0;
+    padding: 4px 0;
+}
+
+.sidebar-right .player-name.current-player {
+    background-color: rgba(151, 68, 211, 0.49);
 }
 
 .sidebar-right ul li img {
@@ -239,8 +264,9 @@ table.chessboard tr td.hover {
     grid-column-gap: 32px;
     overflow-y: auto;
     max-height: 300px;
-    padding-right: 8px;
+    padding: 0 8px;
     align-self: start;
+    text-align: center;
 }
 
 footer {

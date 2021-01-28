@@ -32,18 +32,18 @@
     <script type="text/javascript" src="js/theme.js"></script>
 
     <div id="app">
-        <div v-if="!gamemode" class="gamemodes">
-            <button type="button" class="btn btn-info" @click="gamemode = 'smp'">Multiplayer local</button>
-            <button type="button" class="btn btn-success" @click="loginServer(); gamemode = 'mp'">Multiplayer
+        <div v-if="!game.gamemode" class="gamemodes">
+            <button type="button" class="btn btn-info" @click="game.gamemode = 'smp'">Multiplayer local</button>
+            <button type="button" class="btn btn-success" @click="loginServer(); game.gamemode = 'mp'">Multiplayer
                 online</button>
         </div>
 
-        <div v-if="gamemode === 'mp' && !connection.canStart">
+        <div v-if="game.gamemode === 'mp' && !connection.canStart">
             <p>Game ID: {{ connection.gameid }}</p>
             <p>Waiting for Player 2...</p>
         </div>
 
-        <div v-if="(gamemode === 'mp' && connection.canStart) || gamemode === 'smp'" class="content">
+        <div v-if="(game.gamemode === 'mp' && connection.canStart) || game.gamemode === 'smp'" class="content">
             <div class="modal">
 
             </div>
@@ -52,37 +52,51 @@
 
             </div>
 
-            <table class="chessboard" :class="{'inverted': playerColor === 'black'}">
+            <table class="chessboard" :class="{'inverted': game.playerColor === 'black'}">
                 <tbody>
                     <tr v-for="(board_row, i) in board" :key="i">
-                        <td :id="`cell_${i}_${j}`" v-for="(board_cell, j) in board_row" :key="j"
-                            :class="{'clickable': gamemode === 'mp' ? (board_cell?.color === playerColor && playerColor === connection.currPlayer) : board_cell?.color === color}"
-                            @dragover.prevent="dragOver(i, j)" @dragenter.prevent=""
-                            @drop.prevent="drop(board_cell, i, j)">
+                        <td :id="`cell_${i}_${j}`" v-for="(board_cell, j) in board_row" :key="j" :class="{'clickable': (board_cell?.color === game.playerColor && game.playerColor === game.currPlayer),
+                                    'moved': !!game.currentMove.find(([_i, _j]) => _i === i && _j === j),
+                                    'checked': board_cell?.checked}" @dragover.prevent="dragOver(i, j)"
+                            @dragenter.prevent="" @drop.prevent="drop(board_cell, i, j)" @contextmenu.prevent
+                            @mousedown.right="startArrow(i, j)" @mousemove="moveArrow(i, j)"
+                            @mouseup.right="endArrow(i, j)">
                             <img v-if="board_cell" :src="`assets/${board_cell.image}.png`" alt=""
-                                :draggable="gamemode === 'mp' ? (board_cell?.color === playerColor && playerColor === connection.currPlayer) : board_cell?.color === color"
-                                @drag="dragPiece(i, j)">
+                                :draggable="(board_cell?.color === game.playerColor && game.playerColor === game.currPlayer)"
+                                @drag="dragPiece(i, j)" @dragend="dragEnd(i, j)">
                         </td>
                     </tr>
                 </tbody>
             </table>
 
             <div class="sidebar-right">
-                <ul>
-                    <li v-for="piece in (playerColor === 'white' ? takenPiecesW : takenPiecesB)">
-                        <img :src="`assets/${piece.image}.png`" alt="" />
-                    </li>
-                </ul>
+                <div>
+                    <h1 class="player-name" :class="{'current-player': game.currPlayer !== game.playerColor}">
+                        {{ {white: 'Pretas', black: 'Brancas'}[game.playerColor] }}
+                    </h1>
 
-                <div class="history">
-                    <span v-for="movement in movements">{{ movement }}
+                    <ul>
+                        <li v-for="piece in (game.playerColor === 'white' ? takenPiecesW : takenPiecesB)">
+                            <img :src="`assets/${piece.image}.png`" alt="" />
+                        </li>
+                    </ul>
                 </div>
 
-                <ul>
-                    <li v-for="piece in (playerColor === 'white' ? takenPiecesB : takenPiecesW)">
-                        <img :src="`assets/${piece.image}.png`" alt="" />
-                    </li>
-                </ul>
+                <div class="history">
+                    <span v-for="movement in game.movements">{{ movement }}
+                </div>
+
+                <div>
+                    <ul>
+                        <li v-for="piece in (game.playerColor === 'white' ? takenPiecesB : takenPiecesW)">
+                            <img :src="`assets/${piece.image}.png`" alt="" />
+                        </li>
+                    </ul>
+
+                    <h1 class="player-name" :class="{'current-player': game.currPlayer === game.playerColor}">
+                        {{ {white: 'Brancas', black: 'Pretas'}[game.playerColor] }}
+                    </h1>
+                </div>
             </div>
         </div>
     </div>
