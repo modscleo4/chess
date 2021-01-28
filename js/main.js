@@ -76,6 +76,10 @@ const app = Vue.createApp({
         },
     },
 
+    mounted() {
+        this.play();
+    },
+
     methods: {
         play() {
             if (this.game.movements.length > 0) {
@@ -95,13 +99,15 @@ const app = Vue.createApp({
             this.game.currentMove = [];
             this.game.noCaptureOrPawnsQ = 0;
             this.game.result = null;
+
+            this.connection.gameid = null;
             this.connection.canStart = false;
             this.regenerateArray();
         },
 
         async loginServer() {
             if (!this.connection.gameid) {
-                const gameid = prompt('Game ID (empty for a new game): ');
+                const gameid = prompt('Game ID (vazio para um novo jogo): ');
                 this.connection.gameid = gameid || null;
             }
 
@@ -114,23 +120,55 @@ const app = Vue.createApp({
                 },
 
                 createGame: async (message) => {
-                    const {gameid, game: {player1Color, currPlayer}} = message;
+                    const {gameid, game: {playerColor, currPlayer}} = message;
 
                     this.connection.gameid = gameid;
                     this.game.currPlayer = currPlayer;
-                    this.game.playerColor = player1Color;
+                    this.game.playerColor = playerColor;
                 },
 
                 joinGame: async (message) => {
-                    const {game: {player2Color, currPlayer}} = message;
+                    const {game: {movements, playerColor, currPlayer}} = message;
 
+                    this.game.playerColor = this.game.currPlayer = 'white';
+
+                    movements.forEach(({i, j, newI, newJ}) => {
+                        this.commitMovement(i, j, newI, newJ);
+                        this.game.currPlayer = (this.game.currPlayer === 'white' ? 'black' : 'white');
+                        this.game.playerColor = this.game.currPlayer;
+                    });
+
+                    const lastMovement = movements[movements.length - 1];
+                    this.game.currentMove = !lastMovement ? [] : [[lastMovement.i, lastMovement.j], [lastMovement.newI, lastMovement.newJ]];
                     this.game.currPlayer = currPlayer;
-                    this.game.playerColor = player2Color;
+                    this.game.playerColor = playerColor;
                 },
 
                 start: async (message) => {
                     this.connection.canStart = true;
-                }
+                },
+
+                gameNotFound: async (message) => {
+                    const {gameid} = message;
+
+                    alert(`Jogo ${gameid} não encontrado.`);
+                    this.play();
+                },
+
+                gameFull: async (message) => {
+                    const {gameid} = message;
+
+                    alert(`O jogo ${gameid} está cheio.`);
+                    this.play();
+                },
+
+                playerDisconnected: async (message) => {
+                    if (!confirm('O outro jogador foi desconectado. Deseja aguardá-lo?')) {
+                        return this.play();
+                    }
+
+                    this.connection.canStart = false;
+                },
             };
 
             const socket = createSocket(this.connection.address, commands);
@@ -144,6 +182,11 @@ const app = Vue.createApp({
                 socket.addEventListener('open', () => {
                     resolve();
                 });
+            });
+
+            socket.addEventListener('close', () => {
+                alert('Conexão com o servidor perdida. Tentando reconectar...');
+                this.loginServer();
             });
 
             if (!this.connection.gameid) {

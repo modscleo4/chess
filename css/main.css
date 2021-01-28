@@ -121,6 +121,12 @@ a:hover {
     align-items: start;
 }
 
+.waiting-player {
+    text-align: center;
+    background-color: var(--card-opaque-bg);
+    padding: 48px;
+}
+
 header {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;

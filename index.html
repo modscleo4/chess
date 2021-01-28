@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" theme="system">
+<html lang="pt-br" theme="system">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport"
@@ -38,9 +38,9 @@
                 online</button>
         </div>
 
-        <div v-if="game.gamemode === 'mp' && !connection.canStart">
+        <div v-if="game.gamemode === 'mp' && !connection.canStart" class="waiting-player">
             <p>Game ID: {{ connection.gameid }}</p>
-            <p>Waiting for Player 2...</p>
+            <p>Esperando pelo outro jogador...</p>
         </div>
 
         <div v-if="(game.gamemode === 'mp' && connection.canStart) || game.gamemode === 'smp'" class="content">
