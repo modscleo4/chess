@@ -313,6 +313,11 @@ const app = Vue.createApp({
             this.game.board[i][j] = null;
             this.game.board[newI][newJ] = piece;
 
+            if (piece.char === 'P' && [0, 7].includes(newI)) {
+                Chess.promove(piece, newI, newJ, this.game.promoteTo, this.game.board);
+                promotion = true;
+            }
+
             if (piece.char === 'K' && Math.abs(newJ - j) === 2) {
                 if (newJ > j) {
                     const rook = this.game.board[i][7];
@@ -359,11 +364,6 @@ const app = Vue.createApp({
 
             piece.neverMoved = false;
             takenPiece && this.game.takenPieces.push(takenPiece);
-
-            if (piece.char === 'P' && [0, 7].includes(newI)) {
-                Chess.promove(piece, newI, newJ, this.game.promoteTo, this.game.board);
-                promotion = true;
-            }
 
             const moveAudio = new Audio('assets/move.ogg');
             moveAudio.play();
@@ -472,14 +472,16 @@ const app = Vue.createApp({
                 mov += ' e.p';
             }
 
+            if (promotion) {
+                mov += this.game.promoteTo;
+            }
+
             if (checkMate) {
                 this.game.movements.push(mov + '#');
             } else if (check) {
                 this.game.movements.push(mov + '+');
             } else if (castling) {
                 this.game.movements.push(['0-0', '0-0-0'][castling - 1]);
-            } else if (promotion) {
-                this.game.movements.push(`${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][newJ]}${1 + newI}${this.game.promoteTo}`);
             } else {
                 this.game.movements.push(mov);
             }
