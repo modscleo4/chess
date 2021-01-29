@@ -49,15 +49,15 @@
             </div>
 
             <div class="chessboard-container" :class="{'inverted': game.playerColor === 'black'}">
-                <table class="chessboard">
+                <table @mouseup.left="clearAnnotations()" class="chessboard">
                     <tbody>
                         <tr v-for="(board_row, i) in board" :key="i">
                             <td :id="`cell_${i}_${j}`" v-for="(board_cell, j) in board_row" :key="j" :class="{'clickable': (board_cell?.color === game.playerColor && game.playerColor === game.currPlayer),
                                                     'moved': !!game.currentMove.find(([_i, _j]) => _i === i && _j === j),
                                                     'checked': board_cell?.checked}" @dragover.prevent="dragOver(i, j)"
                                 @dragenter.prevent="" @drop.prevent="drop(board_cell, i, j)" @contextmenu.prevent
-                                @mouseclick.left="clearAnnotations()" @mousedown.right="startArrow(i, j)"
-                                @mousemove="moveArrow(i, j)" @mouseup.right="endArrow(i, j)">
+                                @mousedown.right="startArrow(i, j)" @mousemove="moveArrow(i, j)"
+                                @mouseup.right="endArrow(i, j)">
                                 <span v-if="i === 7"
                                     class="file">{{ ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j] }}</span>
                                 <span v-if="j === 7" class="rank">{{ 8 - i }}</span>

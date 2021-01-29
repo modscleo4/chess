@@ -53,6 +53,7 @@ const app = Vue.createApp({
         },
         annotations: [],
         annotationPreview: null,
+        firstRun: true,
         config: {
             get theme() {
                 return localStorage.getItem('theme') ?? 'system';
@@ -112,7 +113,8 @@ const app = Vue.createApp({
             this.connection.canStart = false;
             this.regenerateArray();
 
-            history.pushState({}, 'Chess', '/chess/');
+            !this.firstRun && history.pushState({}, 'Chess', '/chess/');
+            this.firstRun = false;
         },
 
         async loginServer() {
