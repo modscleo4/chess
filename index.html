@@ -34,16 +34,26 @@
     <div id="app">
         <div v-if="!game.gamemode" class="gamemodes">
             <button type="button" class="btn btn-info" @click="game.gamemode = 'smp'">Multiplayer local</button>
-            <button type="button" class="btn btn-success" @click="loginServer(); game.gamemode = 'mp'">Multiplayer
+            <button type="button" class="btn btn-success" @click="game.gamemode = 'mp'; loginServer();">Multiplayer
                 online</button>
+            <button type="button" class="btn btn-warning" @click="game.gamemode = 'spec'; loginServer();">Assistir
+                partida</button>
         </div>
 
         <div v-if="game.gamemode === 'mp' && !connection.canStart" class="waiting-player">
-            <p>Game ID: <a :href="`/?gameid=${connection.gameid}`">{{ connection.gameid }}</a></p>
+            <p>Game ID: <a :href="`${page}/?gameid=${connection.gameid}&gamemode=mp`">{{ connection.gameid }}</a>
+            </p>
             <p>Esperando pelo outro jogador...</p>
         </div>
 
-        <div v-if="(game.gamemode === 'mp' && connection.canStart) || game.gamemode === 'smp'" class="content">
+        <div v-if="game.gamemode === 'spec' && !connection.canStart" class="waiting-player">
+            <p>Game ID: <a :href="`${page}/?gameid=${connection.gameid}&gamemode=spec`">{{ connection.gameid }}</a>
+            </p>
+            <p>Esperando pelos jogadores...</p>
+        </div>
+
+        <div v-if="((game.gamemode === 'mp' || game.gamemode === 'spec') && connection.canStart) || game.gamemode === 'smp'"
+            class="content">
             <div>
 
             </div>
@@ -52,7 +62,7 @@
                 <table @mouseup.left="clearAnnotations()" class="chessboard">
                     <tbody>
                         <tr v-for="(board_row, i) in board" :key="i">
-                            <td :id="`cell_${i}_${j}`" v-for="(board_cell, j) in board_row" :key="j" :class="{'clickable': (board_cell?.color === game.playerColor && game.playerColor === game.currPlayer),
+                            <td :id="`cell_${i}_${j}`" v-for="(board_cell, j) in board_row" :key="j" :class="{'clickable': gamemode !== 'spec' && (board_cell?.color === game.playerColor && game.playerColor === game.currPlayer),
                                                     'moved': !!game.currentMove.find(([_i, _j]) => _i === i && _j === j),
                                                     'checked': board_cell?.checked}" @dragover.prevent="dragOver(i, j)"
                                 @dragenter.prevent="" @drop.prevent="drop(board_cell, i, j)" @contextmenu.prevent
@@ -62,7 +72,7 @@
                                     class="file">{{ ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j] }}</span>
                                 <span v-if="j === 7" class="rank">{{ 8 - i }}</span>
                                 <img v-if="board_cell" :src="`assets/${board_cell.image}.png`" alt=""
-                                    :draggable="(board_cell?.color === game.playerColor && game.playerColor === game.currPlayer)"
+                                    :draggable="gamemode !== 'spec' && (board_cell?.color === game.playerColor && game.playerColor === game.currPlayer)"
                                     @drag="dragPiece(i, j)" @dragend="dragEnd(i, j)">
                             </td>
                         </tr>
@@ -106,7 +116,7 @@
             <div class="sidebar-right">
                 <div>
                     <h1 class="player-name" :class="{'current-player': game.currPlayer !== game.playerColor}">
-                        {{ {white: 'Pretas', black: 'Brancas'}[game.playerColor] }}
+                        {{ game.playerNames[game.playerColor === 'white' ? 'black' : 'white'] }}
                     </h1>
 
                     <ul>
@@ -131,7 +141,7 @@
                     </ul>
 
                     <h1 class="player-name" :class="{'current-player': game.currPlayer === game.playerColor}">
-                        {{ {white: 'Brancas', black: 'Pretas'}[game.playerColor] }}
+                        {{ game.playerNames[game.playerColor] }}
                     </h1>
                 </div>
             </div>

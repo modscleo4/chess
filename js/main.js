@@ -12,13 +12,17 @@ let timerFn = null;
 
 const app = Vue.createApp({
     data: () => ({
+        //page: '',
+        page: '/chess',
         connection: {
             socket: null,
+            //address: 'localhost',
             address: 'chessjs-server.herokuapp.com',
             gameid: null,
             canStart: false,
         },
         game: {
+            playerNames: {white: 'Brancas', black: 'Pretas'},
             gamemode: null,
             playerColor: 'white',
             currPlayer: 'white',
@@ -34,6 +38,7 @@ const app = Vue.createApp({
             result: null,
             promoteTo: null,
         },
+        playerName: localStorage.getItem('playerName'),
         sidebarOpened: false,
         standalone: window.matchMedia('(display-mode: standalone)').matches,
         drag: {
@@ -87,6 +92,11 @@ const app = Vue.createApp({
     mounted() {
         this.play();
         this.connection.gameid = new URLSearchParams(new URL(window.location).search).get('gameid');
+        this.game.gamemode = new URLSearchParams(new URL(window.location).search).get('gamemode');
+
+        if (['mp', 'spec'].includes(this.game.gamemode)) {
+            this.loginServer();
+        }
     },
 
     methods: {
@@ -113,14 +123,32 @@ const app = Vue.createApp({
             this.connection.canStart = false;
             this.regenerateArray();
 
-            !this.firstRun && history.pushState({}, 'Chess', '/chess/');
+            !this.firstRun && history.pushState({}, 'Chess', `${this.page}/`);
             this.firstRun = false;
         },
 
         async loginServer() {
             if (!this.connection.gameid) {
-                const gameid = prompt('Game ID (vazio para um novo jogo): ');
+                let gameid;
+                if (this.game.gamemode === 'spec') {
+                    do {
+                        gameid = prompt('Game ID: ');
+                    } while (!gameid || gameid?.trim() === '');
+                } else {
+                    gameid = prompt('Game ID (vazio para um novo jogo): ');
+                }
+
                 this.connection.gameid = gameid || null;
+            }
+
+            if (!this.playerName) {
+                let playerName;
+                do {
+                    playerName = prompt('Seu nome de jogador: ');
+                } while (!playerName || playerName?.trim() === '');
+
+                localStorage.setItem('playerName', playerName);
+                this.playerName = playerName;
             }
 
             const commands = {
@@ -138,7 +166,7 @@ const app = Vue.createApp({
                     this.connection.gameid = gameid;
                     this.game.currPlayer = currPlayer;
                     this.game.playerColor = playerColor;
-                    history.pushState({}, `Chess Game ${gameid}`, `/chess/?gameid=${gameid}`);
+                    history.pushState({}, `Chess Game ${gameid}`, `${this.page}/?gameid=${gameid}`);
                 },
 
                 joinGame: async (message) => {
@@ -159,7 +187,10 @@ const app = Vue.createApp({
                 },
 
                 start: async (message) => {
+                    const {game: {player1Name, player2Name}} = message;
                     this.connection.canStart = true;
+
+                    this.game.playerNames = {white: player1Name, black: player2Name};
                 },
 
                 gameNotFound: async (message) => {
@@ -176,8 +207,15 @@ const app = Vue.createApp({
                     this.play();
                 },
 
+                alreadyConnected: async (message) => {
+                    const {gameid} = message;
+
+                    alert(`Você já está no jogo ${gameid}.`);
+                    this.play();
+                },
+
                 playerDisconnected: async (message) => {
-                    if (!confirm('O outro jogador foi desconectado. Deseja aguardá-lo?')) {
+                    if (this.game.gamemode === 'mp' && !confirm('O outro jogador foi desconectado. Deseja aguardá-lo?')) {
                         return this.play();
                     }
 
@@ -206,11 +244,19 @@ const app = Vue.createApp({
             if (!this.connection.gameid) {
                 socket.send(JSON.stringify({
                     command: 'createGame',
+                    playerName: this.playerName,
                 }));
-            } else {
+            } else if (this.game.gamemode === 'mp') {
                 socket.send(JSON.stringify({
                     command: 'joinGame',
                     gameid: this.connection.gameid,
+                    playerName: this.playerName,
+                }));
+            } else {
+                socket.send(JSON.stringify({
+                    command: 'spectate',
+                    gameid: this.connection.gameid,
+                    playerName: this.playerName,
                 }));
             }
         },
