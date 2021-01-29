@@ -533,19 +533,43 @@ export function promove(pawn, i, j, desiredPiece, board) {
 /**
  *
  * @param {Piece} piece
+ * @param {number} i
+ * @param {number} j
  * @param {number} newI
  * @param {number} newJ
  * @param {(Piece | null)[][]} board
  * @param {Piece | null} lastMoved
+ * @return {{sameFile: boolean, sameRank: boolean} | null}
  */
-export function findDuplicateMovement(piece, newI, newJ, board, lastMoved) {
+export function findDuplicateMovement(piece, i, j, newI, newJ, board, lastMoved) {
+    if (piece.char === 'P') {
+        return null;
+    }
+
+    let duplicate = false;
+    let sameFile = false;
+    let sameRank = false;
+
     for (let x = 0; x < 8; x++) {
         for (let y = 0; y < 8; y++) {
             const testingPiece = board[x][y];
-            if (testingPiece && piece !== testingPiece && testingPiece.char === piece.char && testingPiece.color === piece.color && isValidMove(testingPiece, x, y, newI, newJ, board, lastMoved)) {
-                return {x, y};
+            if (!testingPiece || testingPiece.char === 'P') {
+                continue;
+            }
+
+            if (piece !== testingPiece && testingPiece.color === piece.color && testingPiece.char === piece.char && isValidMove(testingPiece, x, y, newI, newJ, board, lastMoved)) {
+                duplicate = true;
+                !sameFile && (sameFile = (y === j));
+                !sameRank && (sameRank = (x === i));
             }
         }
+    }
+
+    if (duplicate) {
+        return {
+            sameFile,
+            sameRank,
+        };
     }
 
     return null;
