@@ -112,7 +112,7 @@ const app = Vue.createApp({
             this.connection.canStart = false;
             this.regenerateArray();
 
-            history.pushState({}, 'Chess', '/');
+            history.pushState({}, 'Chess', '/chess/');
         },
 
         async loginServer() {
@@ -136,7 +136,7 @@ const app = Vue.createApp({
                     this.connection.gameid = gameid;
                     this.game.currPlayer = currPlayer;
                     this.game.playerColor = playerColor;
-                    history.pushState({}, `Chess Game ${gameid}`, `/?gameid=${gameid}`);
+                    history.pushState({}, `Chess Game ${gameid}`, `/chess/?gameid=${gameid}`);
                 },
 
                 joinGame: async (message) => {
