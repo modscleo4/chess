@@ -133,19 +133,29 @@ const app = Vue.createApp({
                 if (this.game.gamemode === 'spec') {
                     do {
                         gameid = prompt('Game ID: ');
-                    } while (!gameid || gameid?.trim() === '');
+                    } while (gameid?.trim() === '');
                 } else {
                     gameid = prompt('Game ID (vazio para um novo jogo): ');
+                }
+
+                if (!gameid) {
+                    this.play();
+                    return;
                 }
 
                 this.connection.gameid = gameid || null;
             }
 
-            if (!this.playerName) {
+            if (!this.playerName && this.game.gamemode === 'mp') {
                 let playerName;
                 do {
                     playerName = prompt('Seu nome de jogador: ');
-                } while (!playerName || playerName?.trim() === '');
+                } while (playerName?.trim() === '');
+
+                if (!playerName) {
+                    this.play();
+                    return;
+                }
 
                 localStorage.setItem('playerName', playerName);
                 this.playerName = playerName;
@@ -256,7 +266,6 @@ const app = Vue.createApp({
                 socket.send(JSON.stringify({
                     command: 'spectate',
                     gameid: this.connection.gameid,
-                    playerName: this.playerName,
                 }));
             }
         },
