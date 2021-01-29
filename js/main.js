@@ -12,12 +12,12 @@ let timerFn = null;
 
 const app = Vue.createApp({
     data: () => ({
-        page: '',
-        //page: '/chess',
+        //page: '',
+        page: '/chess',
         connection: {
             socket: null,
-            address: 'localhost:3000',
-            //address: 'chessjs-server.herokuapp.com',
+            //address: 'localhost:3000',
+            address: 'chessjs-server.herokuapp.com',
             gameid: null,
             canStart: false,
         },
