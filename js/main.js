@@ -138,7 +138,7 @@ const app = Vue.createApp({
                     gameid = prompt('Game ID (vazio para um novo jogo): ');
                 }
 
-                if (!gameid) {
+                if (gameid === null) {
                     this.play();
                     return;
                 }
@@ -152,7 +152,7 @@ const app = Vue.createApp({
                     playerName = prompt('Seu nome de jogador: ');
                 } while (playerName?.trim() === '');
 
-                if (!playerName) {
+                if (playerName === null) {
                     this.play();
                     return;
                 }
