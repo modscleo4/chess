@@ -15,7 +15,7 @@ const app = Vue.createApp({
         connection: {
             socket: null,
             address: 'chessjs-server.herokuapp.com',
-            gameid: new URLSearchParams(new URL(window.location).search).get('gameid') ?? null,
+            gameid: null,
             canStart: false,
         },
         game: {
@@ -45,7 +45,14 @@ const app = Vue.createApp({
             newJ: 0,
         },
         mouseRight: false,
-        arrows: [],
+        mouse: {
+            x1: null,
+            y1: null,
+            x2: null,
+            y2: null,
+        },
+        annotations: [],
+        annotationPreview: null,
         config: {
             get theme() {
                 return localStorage.getItem('theme') ?? 'system';
@@ -78,6 +85,7 @@ const app = Vue.createApp({
 
     mounted() {
         this.play();
+        this.connection.gameid = new URLSearchParams(new URL(window.location).search).get('gameid');
     },
 
     methods: {
@@ -103,6 +111,8 @@ const app = Vue.createApp({
             this.connection.gameid = null;
             this.connection.canStart = false;
             this.regenerateArray();
+
+            history.pushState({}, 'Chess', '/');
         },
 
         async loginServer() {
@@ -126,6 +136,7 @@ const app = Vue.createApp({
                     this.connection.gameid = gameid;
                     this.game.currPlayer = currPlayer;
                     this.game.playerColor = playerColor;
+                    history.pushState({}, `Chess Game ${gameid}`, `/?gameid=${gameid}`);
                 },
 
                 joinGame: async (message) => {
@@ -452,10 +463,10 @@ const app = Vue.createApp({
             const duplicate = Chess.findDuplicateMovement(piece, newI, newJ, boardCopy, this.game.lastMoved);
             let mov = `${piece.char !== 'P' ? piece.char : ''}`;
 
-            if (duplicate) {
-                if (duplicate?.x !== i) {
+            if (duplicate && piece.char !== 'P' && this.game.board[duplicate.x][duplicate.y].char !== 'P') {
+                if (duplicate.x !== i) {
                     mov += ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j];
-                } else if (duplicate?.y === j) {
+                } else if (duplicate.y === j) {
                     mov += 8 - i;
                 } else {
                     mov += `${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j]}${8 - i}`;
@@ -507,8 +518,21 @@ const app = Vue.createApp({
         },
 
         startArrow(i, j) {
-            console.log(`start arrow: ${i} ${j}`);
             this.mouseRight = true;
+
+            let cell;
+            if (this.game.playerColor === 'white') {
+                cell = document.querySelector(`#cell_${i}_${j}`)?.getBoundingClientRect();
+            } else {
+                cell = document.querySelector(`#cell_${7 - i}_${7 - j}`)?.getBoundingClientRect();
+            }
+
+            const table = document.querySelector('table.chessboard')?.getBoundingClientRect();
+
+            this.mouse.x1 = cell?.left - table?.left + (cell?.width ?? 0) / 2;
+            this.mouse.y1 = cell?.top - table?.top + (cell?.height ?? 0) / 2;
+
+            this.annotationPreview = {x1: this.mouse.x1, y1: this.mouse.y1, x2: this.mouse.x1, y2: this.mouse.y1, cellWith: cell?.width, cellHeight: cell?.height};
         },
 
         moveArrow(i, j) {
@@ -516,12 +540,47 @@ const app = Vue.createApp({
                 return;
             }
 
-            console.log(`move arrow: ${i} ${j}`);
+            let cell;
+            if (this.game.playerColor === 'white') {
+                cell = document.querySelector(`#cell_${i}_${j}`)?.getBoundingClientRect();
+            } else {
+                cell = document.querySelector(`#cell_${7 - i}_${7 - j}`)?.getBoundingClientRect();
+            }
+
+            const table = document.querySelector('table.chessboard')?.getBoundingClientRect();
+
+            this.mouse.x2 = cell?.left - table?.left + (cell?.width ?? 0) / 2;
+            this.mouse.y2 = cell?.top - table?.top + (cell?.height ?? 0) / 2;
+
+            this.annotationPreview = {x1: this.mouse.x1, y1: this.mouse.y1, x2: this.mouse.x2, y2: this.mouse.y2, cellWith: cell?.width, cellHeight: cell?.height};
         },
 
         endArrow(i, j) {
-            console.log(`end arrow: ${i} ${j}`);
             this.mouseRight = false;
+            this.annotationPreview = null;
+
+            let cell;
+            if (this.game.playerColor === 'white') {
+                cell = document.querySelector(`#cell_${i}_${j}`)?.getBoundingClientRect();
+            } else {
+                cell = document.querySelector(`#cell_${7 - i}_${7 - j}`)?.getBoundingClientRect();
+            }
+
+            const table = document.querySelector('table.chessboard')?.getBoundingClientRect();
+
+            this.mouse.x2 = cell?.left - table?.left + (cell?.width ?? 0) / 2;
+            this.mouse.y2 = cell?.top - table?.top + (cell?.height ?? 0) / 2;
+
+            let annotation;
+            if (annotation = this.annotations.find(({x1, y1, x2, y2}) => x1 === this.mouse.x1 && y1 === this.mouse.y1 && x2 === this.mouse.x2 && y2 === this.mouse.y2)) {
+                this.annotations.splice(this.annotations.indexOf(annotation), 1);
+            } else {
+                this.annotations.push({x1: this.mouse.x1, y1: this.mouse.y1, x2: this.mouse.x2, y2: this.mouse.y2, cellWith: cell?.width, cellHeight: cell?.height});
+            }
+        },
+
+        clearAnnotations() {
+            this.annotations = [];
         },
     },
 }).mount('#app');

@@ -6,6 +6,10 @@
     box-sizing: border-box;
 }
 
+:root {
+    --board-rotate-time: 1000ms;
+}
+
 html,
 body {
     font-family: 'Raleway', sans-serif;
@@ -116,9 +120,9 @@ a:hover {
 
 #app .content {
     display: grid;
-    grid-template-columns: minmax(200px, 1fr) max-content minmax(200px, 1fr);
+    grid-template-columns: minmax(225px, max-content) max-content minmax(225px, max-content);
     grid-column-gap: 32px;
-    align-items: start;
+    align-items: center;
 }
 
 .waiting-player {
@@ -158,20 +162,29 @@ header {
     text-align: center;
 }
 
+.chessboard-container {
+    position: relative;
+    transition: all var(--board-rotate-time) ease;
+}
+
 table.chessboard {
     font-family: monospace;
     user-select: none;
     background-color: var(--background-color);/*rgba(255, 255, 255, 0.05);*/
-    transition: all 200ms ease;
     box-shadow:  2px 2px 10px 0 rgb(16, 16, 16);
 }
 
-table.chessboard.inverted {
+.chessboard-container.inverted {
     transform: rotate(180deg);
     box-shadow:  -2px -2px 10px 0 rgb(16, 16, 16);
 }
 
-table.chessboard.inverted tr td img {
+.chessboard-container.inverted tr td img {
+    transform: rotate(-180deg);
+}
+
+.chessboard-container.inverted tr td .file,
+.chessboard-container.inverted tr td .rank {
     transform: rotate(-180deg);
 }
 
@@ -194,7 +207,7 @@ table.chessboard tr td .file {
     bottom: -2px;
     left: 2px;
     font-size: 0.45em;
-    transition: all 200ms ease;
+    transition: all var(--board-rotate-time) ease;
 }
 
 table.chessboard tr td .rank {
@@ -204,17 +217,12 @@ table.chessboard tr td .rank {
     top: -2px;
     right: 2px;
     font-size: 0.45em;
-    transition: all 200ms ease;
-}
-
-table.chessboard.inverted tr td .file,
-table.chessboard.inverted tr td .rank {
-    transform: rotate(-180deg);
+    transition: all var(--board-rotate-time) ease;
 }
 
 table.chessboard tr td img {
     pointer-events: none;
-    transition: all 200ms ease;
+    transition: all var(--board-rotate-time) ease;
 }
 
 table.chessboard tr td.clickable img {
@@ -257,6 +265,16 @@ table.chessboard tr td.hover {
     background-color: rgb(33, 147, 240) !important;
 }
 
+.annotations {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0.75;
+}
+
 .sidebar-right {
     display: grid;
     grid-template-rows: auto 300px auto;
@@ -294,13 +312,28 @@ table.chessboard tr td.hover {
 
 .history {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-column-gap: 32px;
+    grid-template-columns: min-content 1fr 1fr;
     overflow-y: auto;
     max-height: 300px;
-    padding: 0 8px;
     align-self: start;
-    text-align: center;
+    align-items: center;
+}
+
+.history .rowid {
+    background-color: var(--movement-row-id);
+    padding: 4px 12px 4px 4px;
+}
+
+.history .movement {
+    padding: 4px;
+}
+
+.history .movement:last-child {
+    background-color: var(--movement-current);
+}
+
+.history .movement:hover {
+    background-color: var(--movement-hover);
 }
 
 footer {

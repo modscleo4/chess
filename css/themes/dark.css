@@ -30,6 +30,10 @@
     --cell-background-color-mousedown: rgba(255, 255, 255, 0.10);
 
     --card-opaque-bg: rgba(255,255, 255, 0.20);
+
+    --movement-row-id:  rgba(255,255, 255, 0.20);
+    --movement-hover:  rgba(36, 186, 206, 0.2);
+    --movement-current:  rgba(23, 248, 248, 0.2);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -65,5 +69,9 @@
         --cell-background-color-mousedown: rgba(255, 255, 255, 0.10);
 
         --card-opaque-bg: rgba(255,255, 255, 0.20);
+
+        --movement-row-id:  rgba(255,255, 255, 0.20);
+        --movement-hover:  rgba(36, 186, 206, 0.2);
+        --movement-current:  rgba(23, 248, 248, 0.2);
     }
 }

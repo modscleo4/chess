@@ -39,37 +39,69 @@
         </div>
 
         <div v-if="game.gamemode === 'mp' && !connection.canStart" class="waiting-player">
-            <p>Game ID: {{ connection.gameid }}</p>
+            <p>Game ID: <a :href="`/?gameid=${connection.gameid}`">{{ connection.gameid }}</a></p>
             <p>Esperando pelo outro jogador...</p>
         </div>
 
         <div v-if="(game.gamemode === 'mp' && connection.canStart) || game.gamemode === 'smp'" class="content">
-            <div class="modal">
-
-            </div>
-
             <div>
 
             </div>
 
-            <table class="chessboard" :class="{'inverted': game.playerColor === 'black'}">
-                <tbody>
-                    <tr v-for="(board_row, i) in board" :key="i">
-                        <td :id="`cell_${i}_${j}`" v-for="(board_cell, j) in board_row" :key="j" :class="{'clickable': (board_cell?.color === game.playerColor && game.playerColor === game.currPlayer),
-                                    'moved': !!game.currentMove.find(([_i, _j]) => _i === i && _j === j),
-                                    'checked': board_cell?.checked}" @dragover.prevent="dragOver(i, j)"
-                            @dragenter.prevent="" @drop.prevent="drop(board_cell, i, j)" @contextmenu.prevent
-                            @mousedown.right="startArrow(i, j)" @mousemove="moveArrow(i, j)"
-                            @mouseup.right="endArrow(i, j)">
-                            <span v-if="i === 7" class="file">{{ ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j] }}</span>
-                            <span v-if="j === 7" class="rank">{{ 8 - i }}</span>
-                            <img v-if="board_cell" :src="`assets/${board_cell.image}.png`" alt=""
-                                :draggable="(board_cell?.color === game.playerColor && game.playerColor === game.currPlayer)"
-                                @drag="dragPiece(i, j)" @dragend="dragEnd(i, j)">
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="chessboard-container" :class="{'inverted': game.playerColor === 'black'}">
+                <table class="chessboard">
+                    <tbody>
+                        <tr v-for="(board_row, i) in board" :key="i">
+                            <td :id="`cell_${i}_${j}`" v-for="(board_cell, j) in board_row" :key="j" :class="{'clickable': (board_cell?.color === game.playerColor && game.playerColor === game.currPlayer),
+                                                    'moved': !!game.currentMove.find(([_i, _j]) => _i === i && _j === j),
+                                                    'checked': board_cell?.checked}" @dragover.prevent="dragOver(i, j)"
+                                @dragenter.prevent="" @drop.prevent="drop(board_cell, i, j)" @contextmenu.prevent
+                                @mouseclick.left="clearAnnotations()" @mousedown.right="startArrow(i, j)"
+                                @mousemove="moveArrow(i, j)" @mouseup.right="endArrow(i, j)">
+                                <span v-if="i === 7"
+                                    class="file">{{ ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j] }}</span>
+                                <span v-if="j === 7" class="rank">{{ 8 - i }}</span>
+                                <img v-if="board_cell" :src="`assets/${board_cell.image}.png`" alt=""
+                                    :draggable="(board_cell?.color === game.playerColor && game.playerColor === game.currPlayer)"
+                                    @drag="dragPiece(i, j)" @dragend="dragEnd(i, j)">
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <svg class="annotations">
+                    <defs>
+                        <marker id="arrowhead-pb" orient="auto" markerWidth="4" markerHeight="8" refX="2.01" refY="2.01"
+                            cgKey="pb">
+                            <path d="M0,0 V4 L3,2 Z" fill="#003088"></path>
+                        </marker>
+                        <marker id="arrowhead-g" orient="auto" markerWidth="4" markerHeight="8" refX="2.01" refY="2.01"
+                            cgKey="g">
+                            <path d="M0,0 V4 L3,2 Z" fill="#15781B"></path>
+                        </marker>
+                    </defs>
+
+                    <circle v-for="annotation in annotations.filter(a => a.x1 === a.x2 && a.y1 === a.y2)"
+                        stroke="#157818" stroke-width="4" fill="none" :opacity="1" :cx="annotation.x1"
+                        :cy="annotation.y1" r="30"></circle>
+                    <line v-for="annotation in annotations.filter(a => a.x1 !== a.x2 || a.y1 !== a.y2)" stroke="#157818"
+                        stroke-width="12" stroke-linecap="round" marker-end="url(#arrowhead-g)" :opacity="1"
+                        :x1="annotation.x1" :y1="annotation.y1" :x2="annotation.x2" :y2="annotation.y2"></line>
+
+                    <template v-if="annotationPreview">
+                        <circle
+                            v-if="annotationPreview.x1 === annotationPreview.x2 && annotationPreview.y1 === annotationPreview.y2"
+                            stroke="#476e48" stroke-width="3" fill="none" :opacity="0.67" :cx="annotationPreview.x1"
+                            :cy="annotationPreview.y1" r="30"></circle>
+                        <line
+                            v-if="annotationPreview.x1 !== annotationPreview.x2 || annotationPreview.y1 !== annotationPreview.y2"
+                            stroke="#476e48" stroke-width="10" stroke-linecap="round" marker-end="url(#arrowhead-g)"
+                            :opacity="0.67" :x1="annotationPreview.x1" :y1="annotationPreview.y1"
+                            :x2="annotationPreview.x2" :y2="annotationPreview.y2">
+                        </line>
+                    </template>
+                </svg>
+            </div>
 
             <div class="sidebar-right">
                 <div>
@@ -85,7 +117,10 @@
                 </div>
 
                 <div class="history">
-                    <span v-for="movement in game.movements">{{ movement }}
+                    <template v-for="(movement, i) in game.movements">
+                        <span v-if="i % 2 === 0" class="rowid">{{ i / 2 + 1 }}</span>
+                        <span class="movement">{{ movement }}</span>
+                    </template>
                 </div>
 
                 <div>
