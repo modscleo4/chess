@@ -521,7 +521,6 @@ const app = Vue.createApp({
             let mov = `${piece.char !== 'P' ? piece.char : ''}`;
 
             if (duplicate) {
-                debugger;
                 if (!duplicate.sameFile) {
                     mov += ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j];
                 } else if (!duplicate.sameRank) {
