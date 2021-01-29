@@ -12,22 +12,24 @@ let timerFn = null;
 
 const app = Vue.createApp({
     data: () => ({
-        //page: '',
-        page: '/chess',
+        page: '',
+        //page: '/chess',
         connection: {
             socket: null,
-            //address: 'localhost',
-            address: 'chessjs-server.herokuapp.com',
+            address: 'localhost:3000',
+            //address: 'chessjs-server.herokuapp.com',
             gameid: null,
             canStart: false,
         },
         game: {
+            start: false,
             playerNames: {white: 'Brancas', black: 'Pretas'},
             gamemode: null,
             playerColor: 'white',
             currPlayer: 'white',
-            lost: false,
-            won: false,
+            timePlayer: null,
+            timeInc: null,
+            won: null,
             draw: false,
             board: null,
             lastMoved: null,
@@ -37,7 +39,14 @@ const app = Vue.createApp({
             noCaptureOrPawnsQ: 0,
             result: null,
             promoteTo: null,
+            player1Timer: 0,
+            player1TimerFn: null,
+            player2Timer: 0,
+            player2TimerFn: null,
         },
+        selectVariant: false,
+        selectMode: false,
+        createGame: false,
         playerName: localStorage.getItem('playerName'),
         sidebarOpened: false,
         standalone: window.matchMedia('(display-mode: standalone)').matches,
@@ -95,29 +104,44 @@ const app = Vue.createApp({
         this.game.gamemode = new URLSearchParams(new URL(window.location).search).get('gamemode');
 
         if (['mp', 'spec'].includes(this.game.gamemode)) {
-            this.loginServer();
+            this.createGame = false;
+            this.selectVariant = true;
         }
     },
 
     methods: {
+        parseS(s) {
+            if (s === Infinity) {
+                return '∞';
+            }
+
+            return `${Math.floor(s / 60).toString().padStart(2, '0')}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
+        },
+
         play() {
             if (this.game.movements.length > 0) {
                 const games = JSON.parse(localStorage.getItem('gameHistory') ?? '[]');
-                games.push({won: this.game.won, lost: this.game.lost, draw: this.game.draw, gamemode: this.game.gamemode, movements: this.game.movements, result: this.game.result});
+                games.push({won: this.game.won, draw: this.game.draw, gamemode: this.game.gamemode, movements: this.game.movements, result: this.game.result});
 
                 localStorage.setItem('gameHistory', JSON.stringify(games));
             }
 
+            this.game.start = false;
             this.game.gamemode = null;
-            this.game.won = false;
-            this.game.lost = false;
+            this.game.won = null;
             this.game.draw = false;
+            this.game.timePlayer = 10;
+            this.game.timeInc = 5;
             this.game.lastMoved = null;
             this.game.takenPieces = [];
             this.game.movements = [];
             this.game.currentMove = [];
             this.game.noCaptureOrPawnsQ = 0;
             this.game.result = null;
+
+            this.selectVariant = false;
+            this.selectMode = false;
+            this.createGame = false;
 
             this.connection.gameid = null;
             this.connection.canStart = false;
@@ -128,46 +152,18 @@ const app = Vue.createApp({
         },
 
         async loginServer() {
-            if (!this.connection.gameid) {
-                let gameid;
-                if (this.game.gamemode === 'spec') {
-                    do {
-                        gameid = prompt('Game ID: ');
-                    } while (gameid?.trim() === '');
-                } else {
-                    gameid = prompt('Game ID (vazio para um novo jogo): ');
-                }
-
-                if (gameid === null) {
-                    this.play();
-                    return;
-                }
-
-                this.connection.gameid = gameid || null;
-            }
-
-            if (!this.playerName && this.game.gamemode === 'mp') {
-                let playerName;
-                do {
-                    playerName = prompt('Seu nome de jogador: ');
-                } while (playerName?.trim() === '');
-
-                if (playerName === null) {
-                    this.play();
-                    return;
-                }
-
-                localStorage.setItem('playerName', playerName);
-                this.playerName = playerName;
-            }
+            localStorage.setItem('playerName', this.playerName);
 
             const commands = {
                 commitMovement: async (message) => {
-                    const {i, j, newI, newJ, game: {currPlayer, promoteTo}} = message;
+                    const {i, j, newI, newJ, game: {currPlayer, promoteTo, player1Timer, player2Timer}} = message;
                     this.game.promoteTo = promoteTo;
                     this.commitMovement(i, j, newI, newJ);
 
                     this.game.currPlayer = currPlayer;
+
+                    this.game.player1Timer = player1Timer;
+                    this.game.player2Timer = player2Timer;
                 },
 
                 createGame: async (message) => {
@@ -180,20 +176,24 @@ const app = Vue.createApp({
                 },
 
                 joinGame: async (message) => {
-                    const {game: {movements, playerColor, currPlayer}} = message;
+                    const {game: {timePlayer, timeInc, movements, playerColor, currPlayer, player1Timer, player2Timer}} = message;
 
                     this.game.playerColor = this.game.currPlayer = 'white';
 
+                    this.game.timePlayer = timePlayer === -1 ? Infinity : timePlayer;
+                    this.game.timeInc = timeInc;
+
                     movements.forEach(({i, j, newI, newJ}) => {
                         this.commitMovement(i, j, newI, newJ);
-                        this.game.currPlayer = (this.game.currPlayer === 'white' ? 'black' : 'white');
-                        this.game.playerColor = this.game.currPlayer;
                     });
 
                     const lastMovement = movements[movements.length - 1];
                     this.game.currentMove = !lastMovement ? [] : [[lastMovement.i, lastMovement.j], [lastMovement.newI, lastMovement.newJ]];
                     this.game.currPlayer = currPlayer;
                     this.game.playerColor = playerColor;
+
+                    this.game.player1Timer = player1Timer;
+                    this.game.player2Timer = player2Timer;
                 },
 
                 start: async (message) => {
@@ -220,7 +220,12 @@ const app = Vue.createApp({
                 alreadyConnected: async (message) => {
                     const {gameid} = message;
 
-                    alert(`Você já está no jogo ${gameid}.`);
+                    if (confirm(`Você já está no jogo ${gameid}. Deseja reconectar?`)) {
+                        socket.close();
+                        this.loginServer();
+                        return;
+                    }
+
                     this.play();
                 },
 
@@ -255,6 +260,8 @@ const app = Vue.createApp({
                 socket.send(JSON.stringify({
                     command: 'createGame',
                     playerName: this.playerName,
+                    timePlayer: this.game.timePlayer === Infinity ? -1 : this.game.timePlayer,
+                    timeInc: this.game.timeInc,
                 }));
             } else if (this.game.gamemode === 'mp') {
                 socket.send(JSON.stringify({
@@ -439,12 +446,11 @@ const app = Vue.createApp({
 
             if (Chess.isCheckMate('white', KingW_i, KingW_j, this.game.board, this.game.lastMoved)) {
                 setTimeout(() => {
-                    alert('Win: Black');
+                    alert('Pretas venceram');
                     this.play();
                 }, 500);
 
-                this.won = this.game.playerColor === 'black';
-                this.lose = this.game.playerColor === 'white';
+                this.won = 'black';
                 this.draw = false;
 
                 if (this.game.won) {
@@ -456,12 +462,11 @@ const app = Vue.createApp({
                 checkMate = true;
             } else if (Chess.isCheckMate('black', KingB_i, KingB_j, this.game.board, this.game.lastMoved)) {
                 setTimeout(() => {
-                    alert('Win: White');
+                    alert('Brancas venceram');
                     this.play();
                 }, 500);
 
-                this.game.won = this.game.playerColor === 'white';
-                this.game.lose = this.game.playerColor === 'black';
+                this.game.won = 'white';
                 this.game.draw = false;
 
                 if (this.game.won) {
@@ -477,41 +482,37 @@ const app = Vue.createApp({
                     this.play();
                 }, 500);
 
-                this.game.won = false;
-                this.game.lose = false;
+                this.game.won = null;
                 this.game.draw = true;
 
                 this.game.result = '½–½';
             } else if (Chess.insufficientMaterial(this.game.board)) {
                 setTimeout(() => {
-                    alert('Draw');
+                    alert('Empate (insuficiência material)');
                     this.play();
                 }, 500);
 
-                this.game.won = false;
-                this.game.lose = false;
+                this.game.won = null;
                 this.game.draw = true;
 
                 this.game.result = '½–½';
             } else if (this.game.noCaptureOrPawnsQ === 100) {
                 setTimeout(() => {
-                    alert('Draw');
+                    alert('Empate (50 movimentos)');
                     this.play();
                 }, 500);
 
-                this.game.won = false;
-                this.game.lose = false;
+                this.game.won = null;
                 this.game.draw = true;
 
                 this.game.result = '½–½';
             } else if (Chess.threefoldRepetition(this.game.movements)) {
                 setTimeout(() => {
-                    alert('Draw');
+                    alert('Empate (repetição de movimentos)');
                     this.play();
                 }, 500);
 
-                this.game.won = false;
-                this.game.lose = false;
+                this.game.won = null;
                 this.game.draw = true;
 
                 this.game.result = '½–½';
@@ -564,14 +565,57 @@ const app = Vue.createApp({
                 this.game.noCaptureOrPawnsQ = 0;
             }
 
+            this.game.currPlayer = (this.game.currPlayer === 'white' ? 'black' : 'white');
+
             if (this.game.gamemode === 'smp') {
-                this.game.currPlayer = (this.game.currPlayer === 'white' ? 'black' : 'white');
                 this.game.playerColor = this.game.currPlayer;
             }
 
             this.game.lastMoved = piece;
 
             this.game.currentMove = [[i, j], [newI, newJ]];
+
+            if (this.game.movements.length >= 2) {
+                if (this.game.currPlayer === 'white') {
+                    this.game.player1TimerFn = setInterval(() => {
+                        this.game.player1Timer++;
+                        if (this.game.player1Timer >= this.game.timePlayer * 60) {
+                            setTimeout(() => {
+                                alert('Pretas venceram (tempo esgotado)');
+                                this.play();
+                            }, 500);
+
+                            clearInterval(this.game.player1TimerFn);
+                            clearInterval(this.game.player2TimerFn);
+
+                            this.game.won = 'black';
+                            this.game.result = '0–1';
+                        }
+                    }, 1000);
+
+                    this.game.player2TimerFn && clearInterval(this.game.player2TimerFn) && (this.game.player2TimerFn = null);
+                    this.game.player2Timer && (this.game.player2Timer -= this.game.timeInc);
+                } else {
+                    this.game.player2TimerFn = setInterval(() => {
+                        this.game.player2Timer++;
+                        if (this.game.player2Timer >= this.game.timePlayer * 60) {
+                            setTimeout(() => {
+                                alert('Brancas venceram (tempo esgotado)');
+                                this.play();
+                            }, 500);
+
+                            clearInterval(this.game.player1TimerFn);
+                            clearInterval(this.game.player2TimerFn);
+
+                            this.game.won = 'white';
+                            this.game.result = '1–0';
+                        }
+                    }, 1000);
+
+                    this.game.player1TimerFn && clearInterval(this.game.player1TimerFn) && (this.game.player1TimerFn = null);
+                    this.game.player1Timer && (this.game.player1Timer -= this.game.timeInc);
+                }
+            }
         },
 
         startArrow(i, j) {

@@ -32,120 +32,190 @@
     <script type="text/javascript" src="js/theme.js"></script>
 
     <div id="app">
-        <div v-if="!game.gamemode" class="gamemodes">
-            <button type="button" class="btn btn-info" @click="game.gamemode = 'smp'">Multiplayer local</button>
-            <button type="button" class="btn btn-success" @click="game.gamemode = 'mp'; loginServer();">Multiplayer
-                online</button>
-            <button type="button" class="btn btn-warning" @click="game.gamemode = 'spec'; loginServer();">Assistir
-                partida</button>
-        </div>
+        <div v-if="!game.start" class="mainMenu">
+            <header>
+                <h1>Chess.js</h1>
+            </header>
 
-        <div v-if="game.gamemode === 'mp' && !connection.canStart" class="waiting-player">
-            <p>Game ID: <a :href="`${page}/?gameid=${connection.gameid}&gamemode=mp`">{{ connection.gameid }}</a>
-            </p>
-            <p>Esperando pelo outro jogador...</p>
-        </div>
-
-        <div v-if="game.gamemode === 'spec' && !connection.canStart" class="waiting-player">
-            <p>Game ID: <a :href="`${page}/?gameid=${connection.gameid}&gamemode=spec`">{{ connection.gameid }}</a>
-            </p>
-            <p>Esperando pelos jogadores...</p>
-        </div>
-
-        <div v-if="((game.gamemode === 'mp' || game.gamemode === 'spec') && connection.canStart) || game.gamemode === 'smp'"
-            class="content">
-            <div>
-
+            <div class="gamemodes" v-if="!game.gamemode">
+                <button type="button" class="btn btn-info"
+                    @click="game.gamemode = 'smp'; selectVariant = true;">Multiplayer
+                    local</button>
+                <button type="button" class="btn btn-success"
+                    @click="game.gamemode = 'mp'; selectMode = true;">Multiplayer
+                    online</button>
+                <button type="button" class="btn btn-warning"
+                    @click="game.gamemode = 'spec'; selectVariant = true;">Assistir
+                    partida</button>
             </div>
 
-            <div class="chessboard-container" :class="{'inverted': game.playerColor === 'black'}">
-                <table @mouseup.left="clearAnnotations()" class="chessboard">
-                    <tbody>
-                        <tr v-for="(board_row, i) in board" :key="i">
-                            <td :id="`cell_${i}_${j}`" v-for="(board_cell, j) in board_row" :key="j" :class="{'clickable': gamemode !== 'spec' && (board_cell?.color === game.playerColor && game.playerColor === game.currPlayer),
-                                                    'moved': !!game.currentMove.find(([_i, _j]) => _i === i && _j === j),
-                                                    'checked': board_cell?.checked}" @dragover.prevent="dragOver(i, j)"
-                                @dragenter.prevent="" @drop.prevent="drop(board_cell, i, j)" @contextmenu.prevent
-                                @mousedown.right="startArrow(i, j)" @mousemove="moveArrow(i, j)"
-                                @mouseup.right="endArrow(i, j)">
-                                <span v-if="i === 7"
-                                    class="file">{{ ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j] }}</span>
-                                <span v-if="j === 7" class="rank">{{ 8 - i }}</span>
-                                <img v-if="board_cell" :src="`assets/${board_cell.image}.png`" alt=""
-                                    :draggable="gamemode !== 'spec' && (board_cell?.color === game.playerColor && game.playerColor === game.currPlayer)"
-                                    @drag="dragPiece(i, j)" @dragend="dragEnd(i, j)">
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div v-if="selectMode" class="hidden mode-selector" :class="{visible: true}">
+                <button type="button" class="btn btn-success"
+                    @click="connection.gameid = null; selectMode = false; selectVariant = true; createGame = true;">Criar
+                    Novo Jogo</button>
+                <button type="button" class="btn btn-warning"
+                    @click="selectMode = false; selectVariant = true; createGame = false;">Entrar
+                    em Jogo existente</button>
 
-                <svg class="annotations">
-                    <defs>
-                        <marker id="arrowhead-pb" orient="auto" markerWidth="4" markerHeight="8" refX="2.01" refY="2.01"
-                            cgKey="pb">
-                            <path d="M0,0 V4 L3,2 Z" fill="#003088"></path>
-                        </marker>
-                        <marker id="arrowhead-g" orient="auto" markerWidth="4" markerHeight="8" refX="2.01" refY="2.01"
-                            cgKey="g">
-                            <path d="M0,0 V4 L3,2 Z" fill="#15781B"></path>
-                        </marker>
-                    </defs>
-
-                    <circle v-for="annotation in annotations.filter(a => a.x1 === a.x2 && a.y1 === a.y2)"
-                        stroke="#157818" stroke-width="4" fill="none" :opacity="1" :cx="annotation.x1"
-                        :cy="annotation.y1" r="30"></circle>
-                    <line v-for="annotation in annotations.filter(a => a.x1 !== a.x2 || a.y1 !== a.y2)" stroke="#157818"
-                        stroke-width="12" stroke-linecap="round" marker-end="url(#arrowhead-g)" :opacity="1"
-                        :x1="annotation.x1" :y1="annotation.y1" :x2="annotation.x2" :y2="annotation.y2"></line>
-
-                    <template v-if="annotationPreview">
-                        <circle
-                            v-if="annotationPreview.x1 === annotationPreview.x2 && annotationPreview.y1 === annotationPreview.y2"
-                            stroke="#476e48" stroke-width="3" fill="none" :opacity="0.67" :cx="annotationPreview.x1"
-                            :cy="annotationPreview.y1" r="30"></circle>
-                        <line
-                            v-if="annotationPreview.x1 !== annotationPreview.x2 || annotationPreview.y1 !== annotationPreview.y2"
-                            stroke="#476e48" stroke-width="10" stroke-linecap="round" marker-end="url(#arrowhead-g)"
-                            :opacity="0.67" :x1="annotationPreview.x1" :y1="annotationPreview.y1"
-                            :x2="annotationPreview.x2" :y2="annotationPreview.y2">
-                        </line>
-                    </template>
-                </svg>
+                <button type="button" class="btn btn-info"
+                    @click="game.gamemode = null; selectMode = false;">Voltar</button>
             </div>
 
-            <div class="sidebar-right">
+            <div v-if="selectVariant" class="hidden variant-selector" :class="{visible: true}">
+                <form @submit.prevent>
+                    <div v-if="game.gamemode === 'mp' && !createGame || game.gamemode === 'spec'" class="form-group">
+                        <label for="inputGameID">ID do jogo</label>
+                        <input id="inputGameID" name="gameID" class="form-control" type="text"
+                            v-model="connection.gameid" required />
+                    </div>
+
+                    <div v-if="game.gamemode === 'mp'" class="form-group">
+                        <label for="inputPlayerName">Nome de jogador</label>
+                        <input id="inputPlayerName" name="playerName" class="form-control" type="text"
+                            v-model="playerName" max="16" required />
+                    </div>
+
+                    <div v-if="game.gamemode === 'smp' || createGame" class="form-group">
+                        <label for="inputTimePlayer">Tempo (min) para jogadas (-1 = Infinito)</label>
+                        <input id="inputTimePlayer" name="timePlayer" class="form-control" type="number" step="1"
+                            min="-1" v-model.number="game.timePlayer" required />
+                    </div>
+
+                    <div v-if="game.gamemode === 'smp' || createGame" class="form-group">
+                        <label for="inputTimeInc">Tempo adicional (s)</label>
+                        <input id="inputTimeInc" name="timeInc" class="form-control" type="number" step="1" min="0"
+                            v-model.number="game.timeInc" required />
+                    </div>
+
+                    <button type="button" class="btn btn-info mr-3"
+                        @click="game.gamemode !== 'mp' && (game.gamemode = null); game.gamemode === 'mp' && (selectMode = true); selectVariant = false;">Voltar</button>
+                    <button type="submit" class="btn btn-success"
+                        @click="game.timePlayer === -1 && (game.timePlayer = Infinity); game.gamemode !== 'smp' && loginServer(); game.start = true;">Iniciar
+                        Jogo</button>
+                </form>
+            </div>
+
+            <footer>
+                <p>Modscleo4 © <span :style="{display: 'none'}">2021</span>
+                    <span class="hidden" :class="{visible: true}">{{ new Date().getFullYear() }}</span>
+                </p>
+            </footer>
+        </div>
+
+        <template v-if="game.start" class="hidden" :class="{visible: true}">
+            <div v-if="game.gamemode === 'mp' && !connection.canStart" class="waiting-player">
+                <p>Game ID: <a :href="`${page}/?gameid=${connection.gameid}&gamemode=mp`">{{ connection.gameid }}</a>
+                </p>
+                <p>Esperando pelo outro jogador...</p>
+            </div>
+
+            <div v-if="game.gamemode === 'spec' && !connection.canStart" class="waiting-player">
+                <p>Game ID: <a :href="`${page}/?gameid=${connection.gameid}&gamemode=spec`">{{ connection.gameid }}</a>
+                </p>
+                <p>Esperando pelos jogadores...</p>
+            </div>
+
+            <div v-if="((game.gamemode === 'mp' || game.gamemode === 'spec') && connection.canStart) || game.gamemode === 'smp'"
+                class="content">
                 <div>
-                    <h1 class="player-name" :class="{'current-player': game.currPlayer !== game.playerColor}">
-                        {{ game.playerNames[game.playerColor === 'white' ? 'black' : 'white'] }}
-                    </h1>
 
-                    <ul>
-                        <li v-for="piece in (game.playerColor === 'white' ? takenPiecesW : takenPiecesB)">
-                            <img :src="`assets/${piece.image}.png`" alt="" />
-                        </li>
-                    </ul>
                 </div>
 
-                <div class="history">
-                    <template v-for="(movement, i) in game.movements">
-                        <span v-if="i % 2 === 0" class="rowid">{{ i / 2 + 1 }}</span>
-                        <span class="movement">{{ movement }}</span>
-                    </template>
+                <div class="chessboard-container" :class="{'inverted': game.playerColor === 'black'}">
+                    <table @mouseup.left="clearAnnotations()" class="chessboard">
+                        <tbody>
+                            <tr v-for="(board_row, i) in board" :key="i">
+                                <td :id="`cell_${i}_${j}`" v-for="(board_cell, j) in board_row" :key="j" :class="{'clickable': gamemode !== 'spec' && (board_cell?.color === game.playerColor && game.playerColor === game.currPlayer),
+                                                                'moved': !!game.currentMove.find(([_i, _j]) => _i === i && _j === j),
+                                                                'checked': board_cell?.checked}"
+                                    @dragover.prevent="dragOver(i, j)" @dragenter.prevent=""
+                                    @drop.prevent="drop(board_cell, i, j)" @contextmenu.prevent
+                                    @mousedown.right="startArrow(i, j)" @mousemove="moveArrow(i, j)"
+                                    @mouseup.right="endArrow(i, j)">
+                                    <span v-if="i === 7"
+                                        class="file">{{ ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j] }}</span>
+                                    <span v-if="j === 7" class="rank">{{ 8 - i }}</span>
+                                    <img v-if="board_cell" :src="`assets/${board_cell.image}.png`" alt=""
+                                        :draggable="game.gamemode !== 'spec' && (board_cell?.color === game.playerColor && game.playerColor === game.currPlayer)"
+                                        @drag="dragPiece(i, j)" @dragend="dragEnd(i, j)">
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <svg class="annotations">
+                        <defs>
+                            <marker id="arrowhead-pb" orient="auto" markerWidth="4" markerHeight="8" refX="2.01"
+                                refY="2.01" cgKey="pb">
+                                <path d="M0,0 V4 L3,2 Z" fill="#003088"></path>
+                            </marker>
+                            <marker id="arrowhead-g" orient="auto" markerWidth="4" markerHeight="8" refX="2.01"
+                                refY="2.01" cgKey="g">
+                                <path d="M0,0 V4 L3,2 Z" fill="#15781B"></path>
+                            </marker>
+                        </defs>
+
+                        <circle v-for="annotation in annotations.filter(a => a.x1 === a.x2 && a.y1 === a.y2)"
+                            stroke="#157818" stroke-width="4" fill="none" :opacity="1" :cx="annotation.x1"
+                            :cy="annotation.y1" r="30"></circle>
+                        <line v-for="annotation in annotations.filter(a => a.x1 !== a.x2 || a.y1 !== a.y2)"
+                            stroke="#157818" stroke-width="12" stroke-linecap="round" marker-end="url(#arrowhead-g)"
+                            :opacity="1" :x1="annotation.x1" :y1="annotation.y1" :x2="annotation.x2"
+                            :y2="annotation.y2"></line>
+
+                        <template v-if="annotationPreview">
+                            <circle
+                                v-if="annotationPreview.x1 === annotationPreview.x2 && annotationPreview.y1 === annotationPreview.y2"
+                                stroke="#476e48" stroke-width="3" fill="none" :opacity="0.67" :cx="annotationPreview.x1"
+                                :cy="annotationPreview.y1" r="30"></circle>
+                            <line
+                                v-if="annotationPreview.x1 !== annotationPreview.x2 || annotationPreview.y1 !== annotationPreview.y2"
+                                stroke="#476e48" stroke-width="10" stroke-linecap="round" marker-end="url(#arrowhead-g)"
+                                :opacity="0.67" :x1="annotationPreview.x1" :y1="annotationPreview.y1"
+                                :x2="annotationPreview.x2" :y2="annotationPreview.y2">
+                            </line>
+                        </template>
+                    </svg>
                 </div>
 
-                <div>
-                    <ul>
-                        <li v-for="piece in (game.playerColor === 'white' ? takenPiecesB : takenPiecesW)">
-                            <img :src="`assets/${piece.image}.png`" alt="" />
-                        </li>
-                    </ul>
+                <div class="sidebar-right">
+                    <div>
+                        <h1 class="player-name" :class="{'current-player': game.currPlayer !== game.playerColor}">
+                            <span>{{ game.playerNames[game.playerColor === 'white' ? 'black' : 'white'] }}</span>
+                            <span
+                                class="timer">{{ parseS(game.timePlayer * 60 -{white: game.player2Timer, black: game.player1Timer}[game.playerColor]) }}</span>
+                        </h1>
 
-                    <h1 class="player-name" :class="{'current-player': game.currPlayer === game.playerColor}">
-                        {{ game.playerNames[game.playerColor] }}
-                    </h1>
+                        <ul>
+                            <li v-for="piece in (game.playerColor === 'white' ? takenPiecesW : takenPiecesB)">
+                                <img :src="`assets/${piece.image}.png`" alt="" />
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="history">
+                        <template v-for="(movement, i) in game.movements">
+                            <span v-if="i % 2 === 0" class="rowid">{{ i / 2 + 1 }}</span>
+                            <span class="movement">{{ movement }}</span>
+                        </template>
+                    </div>
+
+                    <div>
+                        <ul>
+                            <li v-for="piece in (game.playerColor === 'white' ? takenPiecesB : takenPiecesW)">
+                                <img :src="`assets/${piece.image}.png`" alt="" />
+                            </li>
+                        </ul>
+
+                        <h1 class="player-name" :class="{'current-player': game.currPlayer === game.playerColor}">
+                            <span>{{ game.playerNames[game.playerColor] }}</span>
+                            <span
+                                class="timer">{{ parseS(game.timePlayer * 60 - {white: game.player1Timer, black: game.player2Timer}[game.playerColor]) }}</span>
+                        </h1>
+                    </div>
                 </div>
             </div>
-        </div>
+        </template>
     </div>
 
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>

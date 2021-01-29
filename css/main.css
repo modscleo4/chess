@@ -1,6 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Raleway&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300&display=swap');
+
+@font-face {
+    font-family: 'Granotta';
+    src: url('/assets/fonts/Granotta.ttf');
+}
 
 * {
     box-sizing: border-box;
@@ -103,6 +106,14 @@ a:hover {
     backdrop-filter: blur(1px);
 }
 
+.hidden {
+    display: none;
+}
+
+.visible {
+    display: unset;
+}
+
 #app {
     width: 100%;
     min-width: 400px;
@@ -112,32 +123,45 @@ a:hover {
     justify-content: center;
 }
 
-.gamemodes {
+.mainMenu {
+    display: grid;
+    grid-template-rows: auto auto auto;
+    grid-row-gap: 64px;
+    text-align: center;
+}
+
+.mainMenu header h1 {
+    font-family: 'Granotta';
+    font-size: 4em;
+}
+
+.mainMenu .gamemodes,
+.mainMenu .mode-selector {
     display: grid;
     grid-template-columns: auto;
     grid-row-gap: 1em;
 }
 
+.mainMenu .variant-selector .form-group {
+    text-align: left;
+}
+
+.mainMenu .variant-selector .form-group input {
+    font-size: 12pt;
+}
+
 #app .content {
     display: grid;
-    grid-template-columns: minmax(225px, max-content) max-content minmax(225px, max-content);
+    grid-template-columns: minmax(max-content, 225px) max-content 225px;
     grid-column-gap: 32px;
     align-items: center;
+    padding: 16px;
 }
 
 .waiting-player {
     text-align: center;
     background-color: var(--card-opaque-bg);
     padding: 48px;
-}
-
-header {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    grid-column-gap: 8px;
-    margin-bottom: 16px;
-    justify-items: center;
-    align-items: center;
 }
 
 .game-container {
@@ -304,6 +328,11 @@ table.chessboard tr td.hover {
 
 .sidebar-right .player-name.current-player {
     background-color: rgba(151, 68, 211, 0.49);
+}
+
+.sidebar-right .player-name .timer {
+    float: right;
+    margin-right: 4px;
 }
 
 .sidebar-right ul li img {
