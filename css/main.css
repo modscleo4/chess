@@ -2,7 +2,7 @@
 
 @font-face {
     font-family: 'Granotta';
-    src: url('assets/fonts/Granotta.ttf');
+    src: url('../assets/fonts/Granotta.ttf');
 }
 
 * {
