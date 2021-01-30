@@ -128,8 +128,8 @@
                                                                 'moved': !!game.currentMove.find(([_i, _j]) => _i === i && _j === j),
                                                                 'checked': board_cell?.checked}"
                                     @dragover.prevent="dragOver(i, j)" @dragenter.prevent=""
-                                    @drop.prevent="drop(board_cell, i, j)" @contextmenu.prevent
-                                    @mousedown.right="startArrow(i, j)" @mousemove="moveArrow(i, j)"
+                                    @drop.prevent="drop(board_cell, i)" @contextmenu.prevent
+                                    @mousedown.right="startArrow(i, j, $event.shiftKey)" @mousemove="moveArrow(i, j)"
                                     @mouseup.right="endArrow(i, j)">
                                     <span v-if="i === 7"
                                         class="file">{{ ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j] }}</span>
@@ -152,24 +152,49 @@
                                 refY="2.01" cgKey="g">
                                 <path d="M0,0 V4 L3,2 Z" fill="#15781B"></path>
                             </marker>
+                            <marker id="arrowhead-r" orient="auto" markerWidth="4" markerHeight="8" refX="2.05"
+                                refY="2.01" cgKey="r">
+                                <path d="M0,0 V4 L3,2 Z" fill="#882020"></path>
+                            </marker>
                         </defs>
 
-                        <circle v-for="annotation in annotations.filter(a => a.x1 === a.x2 && a.y1 === a.y2)"
+                        <circle
+                            v-for="annotation in annotations.filter(a => (a.x1 === a.x2 && a.y1 === a.y2) && !a.shift)"
                             stroke="#157818" stroke-width="4" fill="none" :opacity="1" :cx="annotation.x1"
                             :cy="annotation.y1" r="30"></circle>
-                        <line v-for="annotation in annotations.filter(a => a.x1 !== a.x2 || a.y1 !== a.y2)"
+                        <line
+                            v-for="annotation in annotations.filter(a => (a.x1 !== a.x2 || a.y1 !== a.y2) && !a.shift)"
                             stroke="#157818" stroke-width="12" stroke-linecap="round" marker-end="url(#arrowhead-g)"
+                            :opacity="1" :x1="annotation.x1" :y1="annotation.y1" :x2="annotation.x2"
+                            :y2="annotation.y2"></line>
+
+                        <circle v-for="annotation in annotations.filter(a => a.x1 === a.x2 && a.y1 === a.y2 && a.shift)"
+                            stroke="#882020" stroke-width="4" fill="none" :opacity="1" :cx="annotation.x1"
+                            :cy="annotation.y1" r="30"></circle>
+                        <line v-for="annotation in annotations.filter(a => (a.x1 !== a.x2 || a.y1 !== a.y2) && a.shift)"
+                            stroke="#882020" stroke-width="12" stroke-linecap="round" marker-end="url(#arrowhead-r)"
                             :opacity="1" :x1="annotation.x1" :y1="annotation.y1" :x2="annotation.x2"
                             :y2="annotation.y2"></line>
 
                         <template v-if="annotationPreview">
                             <circle
-                                v-if="annotationPreview.x1 === annotationPreview.x2 && annotationPreview.y1 === annotationPreview.y2"
-                                stroke="#476e48" stroke-width="3" fill="none" :opacity="0.67" :cx="annotationPreview.x1"
+                                v-if="(annotationPreview.x1 === annotationPreview.x2 && annotationPreview.y1 === annotationPreview.y2) && !annotationPreview.shift"
+                                stroke="#157818" stroke-width="3" fill="none" :opacity="0.67" :cx="annotationPreview.x1"
                                 :cy="annotationPreview.y1" r="30"></circle>
                             <line
-                                v-if="annotationPreview.x1 !== annotationPreview.x2 || annotationPreview.y1 !== annotationPreview.y2"
-                                stroke="#476e48" stroke-width="10" stroke-linecap="round" marker-end="url(#arrowhead-g)"
+                                v-if="(annotationPreview.x1 !== annotationPreview.x2 || annotationPreview.y1 !== annotationPreview.y2) && !annotationPreview.shift"
+                                stroke="#157818" stroke-width="10" stroke-linecap="round" marker-end="url(#arrowhead-g)"
+                                :opacity="0.67" :x1="annotationPreview.x1" :y1="annotationPreview.y1"
+                                :x2="annotationPreview.x2" :y2="annotationPreview.y2">
+                            </line>
+
+                            <circle
+                                v-if="(annotationPreview.x1 === annotationPreview.x2 && annotationPreview.y1 === annotationPreview.y2) && annotationPreview.shift"
+                                stroke="#882020" stroke-width="3" fill="none" :opacity="0.67" :cx="annotationPreview.x1"
+                                :cy="annotationPreview.y1" r="30"></circle>
+                            <line
+                                v-if="(annotationPreview.x1 !== annotationPreview.x2 || annotationPreview.y1 !== annotationPreview.y2) && annotationPreview.shift"
+                                stroke="#882020" stroke-width="10" stroke-linecap="round" marker-end="url(#arrowhead-r)"
                                 :opacity="0.67" :x1="annotationPreview.x1" :y1="annotationPreview.y1"
                                 :x2="annotationPreview.x2" :y2="annotationPreview.y2">
                             </line>

@@ -58,8 +58,11 @@ const app = Vue.createApp({
             newI: 0,
             newJ: 0,
         },
+        shift: false,
         mouseRight: false,
         mouse: {
+            i: null,
+            j: null,
             x1: null,
             y1: null,
             x2: null,
@@ -142,6 +145,7 @@ const app = Vue.createApp({
             this.selectVariant = false;
             this.selectMode = false;
             this.createGame = false;
+            this.clearAnnotations();
 
             this.connection.gameid = null;
             this.connection.canStart = false;
@@ -639,8 +643,15 @@ const app = Vue.createApp({
             }
         },
 
-        startArrow(i, j) {
+        isPieceMove(i, j, newI, newJ) {
+            return (i === newI || j === newJ) || // Rook
+                (Math.abs(newI - i) === Math.abs(newJ - j)) || // Bishop
+                (Math.abs(newI - i) === 2 && Math.abs(newJ - j) === 1 || Math.abs(newI - i) === 1 && Math.abs(newJ - j) === 2); // Knight
+        },
+
+        startArrow(i, j, shift) {
             this.mouseRight = true;
+            this.shift = shift;
 
             let cell;
             if (this.game.playerColor === 'white') {
@@ -651,10 +662,14 @@ const app = Vue.createApp({
 
             const table = document.querySelector('table.chessboard')?.getBoundingClientRect();
 
-            this.mouse.x1 = cell?.left - table?.left + (cell?.width ?? 0) / 2;
-            this.mouse.y1 = cell?.top - table?.top + (cell?.height ?? 0) / 2;
+            this.mouse.i = i;
+            this.mouse.j = j;
+            this.mouse.x1 = Math.floor(cell?.left - table?.left + (cell?.width ?? 0) / 2);
+            this.mouse.y1 = Math.floor(cell?.top - table?.top + (cell?.height ?? 0) / 2);
+            this.mouse.x2 = this.mouse.x1;
+            this.mouse.y2 = this.mouse.y1;
 
-            this.annotationPreview = {x1: this.mouse.x1, y1: this.mouse.y1, x2: this.mouse.x1, y2: this.mouse.y1, cellWith: cell?.width, cellHeight: cell?.height};
+            this.annotationPreview = {x1: this.mouse.x1, y1: this.mouse.y1, x2: this.mouse.x1, y2: this.mouse.y1, shift: this.shift};
         },
 
         moveArrow(i, j) {
@@ -671,14 +686,17 @@ const app = Vue.createApp({
 
             const table = document.querySelector('table.chessboard')?.getBoundingClientRect();
 
-            this.mouse.x2 = cell?.left - table?.left + (cell?.width ?? 0) / 2;
-            this.mouse.y2 = cell?.top - table?.top + (cell?.height ?? 0) / 2;
+            if (!this.isPieceMove(this.mouse.i, this.mouse.j, i, j)) {
+                return;
+            }
 
-            this.annotationPreview = {x1: this.mouse.x1, y1: this.mouse.y1, x2: this.mouse.x2, y2: this.mouse.y2, cellWith: cell?.width, cellHeight: cell?.height};
+            this.mouse.x2 = Math.floor(cell?.left - table?.left + (cell?.width ?? 0) / 2);
+            this.mouse.y2 = Math.floor(cell?.top - table?.top + (cell?.height ?? 0) / 2);
+
+            this.annotationPreview = {x1: this.mouse.x1, y1: this.mouse.y1, x2: this.mouse.x2, y2: this.mouse.y2, shift: this.shift};
         },
 
         endArrow(i, j) {
-            this.mouseRight = false;
             this.annotationPreview = null;
 
             let cell;
@@ -690,15 +708,21 @@ const app = Vue.createApp({
 
             const table = document.querySelector('table.chessboard')?.getBoundingClientRect();
 
-            this.mouse.x2 = cell?.left - table?.left + (cell?.width ?? 0) / 2;
-            this.mouse.y2 = cell?.top - table?.top + (cell?.height ?? 0) / 2;
+            if (this.isPieceMove(this.mouse.i, this.mouse.j, i, j)) {
+                this.mouse.x2 = Math.floor(cell?.left - table?.left + (cell?.width ?? 0) / 2);
+                this.mouse.y2 = Math.floor(cell?.top - table?.top + (cell?.height ?? 0) / 2);
+            }
 
             let annotation;
-            if (annotation = this.annotations.find(({x1, y1, x2, y2}) => x1 === this.mouse.x1 && y1 === this.mouse.y1 && x2 === this.mouse.x2 && y2 === this.mouse.y2)) {
+            if (annotation = this.annotations.find(({x1, y1, x2, y2, shift}) => x1 === this.mouse.x1 && y1 === this.mouse.y1 && x2 === this.mouse.x2 && y2 === this.mouse.y2 && shift === this.shift)) {
                 this.annotations.splice(this.annotations.indexOf(annotation), 1);
+            } else if (annotation = this.annotations.find(({x1, y1, x2, y2, shift}) => x1 === this.mouse.x1 && y1 === this.mouse.y1 && x2 === this.mouse.x2 && y2 === this.mouse.y2 && shift === !this.shift)) {
+                annotation.shift = this.shift;
             } else {
-                this.annotations.push({x1: this.mouse.x1, y1: this.mouse.y1, x2: this.mouse.x2, y2: this.mouse.y2, cellWith: cell?.width, cellHeight: cell?.height});
+                this.annotations.push({x1: this.mouse.x1, y1: this.mouse.y1, x2: this.mouse.x2, y2: this.mouse.y2, shift: this.shift});
             }
+
+            this.mouseRight = false;
         },
 
         clearAnnotations() {
