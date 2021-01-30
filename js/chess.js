@@ -383,15 +383,13 @@ export function generateArray() {
     });
 
     const QueenW = makePiece('Q', 'white', 'QueenW', (i, j, newI, newJ, board) => {
-        return ((i === newI || j === newJ) || Math.abs(newI - i) === Math.abs(newJ - j))
-            && checkHVCollisions(i, j, newI, newJ, board)
-            && checkDCollisions(i, j, newI, newJ, board);
+        return ((i === newI || j === newJ) && checkHVCollisions(i, j, newI, newJ, board)
+            || Math.abs(newI - i) === Math.abs(newJ - j)) && checkDCollisions(i, j, newI, newJ, board);
     });
 
     const QueenB = makePiece('Q', 'black', 'QueenB', (i, j, newI, newJ, board) => {
-        return ((i === newI || j === newJ) || Math.abs(newI - i) === Math.abs(newJ - j))
-            && checkHVCollisions(i, j, newI, newJ, board)
-            && checkDCollisions(i, j, newI, newJ, board);
+        return ((i === newI || j === newJ) && checkHVCollisions(i, j, newI, newJ, board)
+            || Math.abs(newI - i) === Math.abs(newJ - j)) && checkDCollisions(i, j, newI, newJ, board);
     });
 
     const KingW = makePiece('K', 'white', 'KingW', function (i, j, newI, newJ, board) {
