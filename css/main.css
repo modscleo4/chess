@@ -356,7 +356,14 @@ table.chessboard tr td.hover {
     padding: 4px 12px 4px 4px;
 }
 
-.history .movement {
+.history .result {
+    border-top: 1px solid var(--card-opaque-bg);
+    grid-column: 1 / -1;
+    text-align: center;
+}
+
+.history .movement,
+.history .result {
     padding: 4px;
 }
 
@@ -364,7 +371,8 @@ table.chessboard tr td.hover {
     background-color: var(--movement-current);
 }
 
-.history .movement:hover {
+.history .movement:hover,
+.history .result:hover {
     background-color: var(--movement-hover);
 }
 

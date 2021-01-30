@@ -222,6 +222,8 @@
                             <span v-if="i % 2 === 0" class="rowid">{{ i / 2 + 1 }}</span>
                             <span class="movement">{{ movement }}</span>
                         </template>
+
+                        <span v-if="game.result" class="result">{{ game.result }}</span>
                     </div>
 
                     <div>

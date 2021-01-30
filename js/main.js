@@ -135,6 +135,10 @@ const app = Vue.createApp({
             this.game.draw = false;
             this.game.timePlayer = 10;
             this.game.timeInc = 5;
+            this.game.player1Timer = 0;
+            this.game.player1TimerFn = null;
+            this.game.player2Timer = 0;
+            this.game.player2TimerFn = null;
             this.game.lastMoved = null;
             this.game.takenPieces = [];
             this.game.movements = [];
@@ -163,7 +167,7 @@ const app = Vue.createApp({
                 return;
             }
 
-            if (!this.game.timePlayer || this.game.timeInc <= 0 || this.game.timeInc > 180) {
+            if (!this.game.timePlayer || this.game.timeInc < 0 || this.game.timeInc > 180) {
                 alert('Preencha um valor válido entre 0 e 180');
                 document.querySelector('#inputTimeInc')?.focus();
 
@@ -639,6 +643,11 @@ const app = Vue.createApp({
 
                     this.game.player1TimerFn && clearInterval(this.game.player1TimerFn) && (this.game.player1TimerFn = null);
                     this.game.player1Timer && (this.game.player1Timer -= this.game.timeInc);
+                }
+
+                if (this.game.result) {
+                    clearInterval(this.game.player1TimerFn);
+                    clearInterval(this.game.player2TimerFn);
                 }
             }
         },
