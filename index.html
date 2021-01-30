@@ -72,25 +72,24 @@
                     <div v-if="game.gamemode === 'mp'" class="form-group">
                         <label for="inputPlayerName">Nome de jogador</label>
                         <input id="inputPlayerName" name="playerName" class="form-control" type="text"
-                            v-model="playerName" max="16" required />
+                            v-model="playerName" maxlength="16" required />
                     </div>
 
                     <div v-if="game.gamemode === 'smp' || createGame" class="form-group">
                         <label for="inputTimePlayer">Tempo (min) para jogadas (-1 = Infinito)</label>
                         <input id="inputTimePlayer" name="timePlayer" class="form-control" type="number" step="1"
-                            min="-1" v-model.number="game.timePlayer" required />
+                            min="-1" max="180" v-model.number="game.timePlayer" required />
                     </div>
 
                     <div v-if="game.gamemode === 'smp' || createGame" class="form-group">
                         <label for="inputTimeInc">Tempo adicional (s)</label>
                         <input id="inputTimeInc" name="timeInc" class="form-control" type="number" step="1" min="0"
-                            v-model.number="game.timeInc" required />
+                            max="180" v-model.number="game.timeInc" required />
                     </div>
 
                     <button type="button" class="btn btn-info mr-3"
                         @click="game.gamemode !== 'mp' && (game.gamemode = null); game.gamemode === 'mp' && (selectMode = true); selectVariant = false;">Voltar</button>
-                    <button type="submit" class="btn btn-success"
-                        @click="game.timePlayer === -1 && (game.timePlayer = Infinity); game.gamemode !== 'smp' && loginServer(); game.start = true;">Iniciar
+                    <button type="submit" class="btn btn-success" @click="startGame();">Iniciar
                         Jogo</button>
                 </form>
             </div>

@@ -151,6 +151,27 @@ const app = Vue.createApp({
             this.firstRun = false;
         },
 
+        startGame() {
+            if (!this.game.timePlayer || this.game.timePlayer <= 0 && this.game.timePlayer !== -1 || this.game.timePlayer > 180) {
+                alert('Preencha um valor válido entre 1 e 180');
+                document.querySelector('#inputTimePlayer')?.focus();
+
+                return;
+            }
+
+            if (!this.game.timePlayer || this.game.timeInc <= 0 || this.game.timeInc > 180) {
+                alert('Preencha um valor válido entre 0 e 180');
+                document.querySelector('#inputTimeInc')?.focus();
+
+                return;
+            }
+
+            this.game.timePlayer === -1 && (this.game.timePlayer = Infinity);
+            this.game.gamemode !== 'smp' && this.loginServer();
+
+            this.game.start = true;
+        },
+
         async loginServer() {
             localStorage.setItem('playerName', this.playerName);
 
@@ -441,8 +462,8 @@ const app = Vue.createApp({
             piece.neverMoved = false;
             takenPiece && this.game.takenPieces.push(takenPiece);
 
-            const moveAudio = new Audio('assets/move.ogg');
-            moveAudio.play();
+            const audio = new Audio(capture ? 'assets/capture.ogg' : 'assets/move.ogg');
+            audio.play();
 
             if (Chess.isCheckMate('white', KingW_i, KingW_j, this.game.board, this.game.lastMoved)) {
                 setTimeout(() => {
