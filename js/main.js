@@ -83,24 +83,6 @@ const app = Vue.createApp({
         },
     }),
 
-    computed: {
-        board() {
-            if (!this.game.board) {
-                this.regenerateArray();
-            }
-
-            return this.game.board;
-        },
-
-        takenPiecesW() {
-            return this.game.takenPieces.filter(p => p.color === 'white');
-        },
-
-        takenPiecesB() {
-            return this.game.takenPieces.filter(p => p.color === 'black');
-        },
-    },
-
     mounted() {
         this.play();
         this.connection.gameid = new URLSearchParams(new URL(window.location).search).get('gameid');
@@ -119,6 +101,14 @@ const app = Vue.createApp({
             }
 
             return `${Math.floor(s / 60).toString().padStart(2, '0')}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
+        },
+
+        takenPiecesW() {
+            return this.game.takenPieces.filter(p => p.color === 'white');
+        },
+
+        takenPiecesB() {
+            return this.game.takenPieces.filter(p => p.color === 'black');
         },
 
         play() {
@@ -189,7 +179,7 @@ const app = Vue.createApp({
                 commitMovement: async (message) => {
                     const {i, j, newI, newJ, game: {currPlayer, promoteTo, player1Timer, player2Timer}} = message;
                     this.game.promoteTo = promoteTo;
-                    this.commitMovement(i, j, newI, newJ);
+                    this.commitMovement(i, j, newI, newJ, false);
 
                     this.game.currPlayer = currPlayer;
 
@@ -215,7 +205,7 @@ const app = Vue.createApp({
                     this.game.timeInc = timeInc;
 
                     movements.forEach(({i, j, newI, newJ}) => {
-                        this.commitMovement(i, j, newI, newJ);
+                        this.commitMovement(i, j, newI, newJ, false);
                     });
 
                     const lastMovement = movements[movements.length - 1];
@@ -312,6 +302,17 @@ const app = Vue.createApp({
             this.game.board = Chess.generateArray();
         },
 
+        pointsAdvantage(playerColor) {
+            const piecesW = this.takenPiecesB().reduce((acc, p) => {(p.char === 'Q' ? acc.Q += 9 : p.char === 'R' ? acc.R += 5 : p.char === 'N' ? acc.N += 3 : p.char === 'B' ? acc.B += 3 : p.char === 'P' ? acc.P += 1 : 0); return acc;}, {Q: 0, R: 0, N: 0, B: 0, P: 0});
+            const piecesB = this.takenPiecesW().reduce((acc, p) => {(p.char === 'Q' ? acc.Q += 9 : p.char === 'R' ? acc.R += 5 : p.char === 'N' ? acc.N += 3 : p.char === 'B' ? acc.B += 3 : p.char === 'P' ? acc.P += 1 : 0); return acc;}, {Q: 0, R: 0, N: 0, B: 0, P: 0});
+
+            const pointsW = Math.max(piecesW.Q - piecesB.Q, 0) + Math.max(piecesW.R - piecesB.R, 0) + Math.max(piecesW.N - piecesB.N, 0) + Math.max(piecesW.B - piecesB.B, 0) + Math.max(piecesW.P - piecesB.P, 0);
+            const pointsB = Math.max(piecesB.Q - piecesW.Q, 0) + Math.max(piecesB.R - piecesW.R, 0) + Math.max(piecesB.N - piecesW.N, 0) + Math.max(piecesB.B - piecesW.B, 0) + Math.max(piecesB.P - piecesW.P, 0);
+
+            return playerColor === 'white' ? (pointsW > pointsB ? `+${pointsW}` : '') :
+                playerColor === 'black' ? (pointsB > pointsW ? `+${pointsB}` : '') : '';
+        },
+
         dragPiece(i, j) {
             if (this.drag.dragging) {
                 return;
@@ -322,6 +323,19 @@ const app = Vue.createApp({
             this.drag.j = j;
 
             this.hidePiece(i, j);
+        },
+
+        setDragImage(i, j, e) {
+            const img = document.createElement('img');
+            img.src = document.querySelector(`#cell_${i}_${j} img`)?.src;
+
+            const cell = document.querySelector(`#cell_${i}_${j} img`)?.getBoundingClientRect();
+
+            const x = e.clientX - cell.left;
+            const y = e.clientY - cell.top;
+
+            e.dataTransfer.dropEffect = 'move';
+            e.dataTransfer.setDragImage(img, x, y);
         },
 
         hidePiece(i, j) {
@@ -387,16 +401,19 @@ const app = Vue.createApp({
          * @param {number} j
          * @param {number} newI
          * @param {number} newJ
+         * @param {boolean} checkValid
          */
-        commitMovement(i, j, newI, newJ) {
+        commitMovement(i, j, newI, newJ, checkValid = true) {
             const piece = this.game.board[i][j];
 
             if (newI === i && newJ === j) {
                 return;
             }
 
-            if (!Chess.isValidMove(piece, i, j, newI, newJ, this.game.board, this.game.lastMoved)) {
-                return;
+            if (checkValid) { // Trust the Server, do not check movement validness again
+                if (!Chess.isValidMove(piece, i, j, newI, newJ, this.game.board, this.game.lastMoved)) {
+                    return;
+                }
             }
 
             let capture = false;
@@ -406,9 +423,9 @@ const app = Vue.createApp({
             let check = false;
             let checkMate = false;
 
-            let takenPiece = this.game.board[newI][newJ];
+            let takenPiece = this.game.board[newI][newJ]; // Capture
             if (piece.char === 'P' && !takenPiece && newJ !== j && ((piece.color === 'white' && i === 3) || (piece.color === 'black' && i === 4))) {
-                enPassant = true;
+                enPassant = true; // En Passant Capture
                 takenPiece = this.game.board[i][newJ];
                 this.game.board[i][newJ] = null;
             }
@@ -420,7 +437,7 @@ const app = Vue.createApp({
             this.game.board[i][j] = null;
             this.game.board[newI][newJ] = piece;
 
-            if (piece.char === 'P' && [0, 7].includes(newI)) {
+            if (piece.char === 'P' && [0, 7].includes(newI)) { // Promotion
                 Chess.promove(piece, newI, newJ, this.game.promoteTo, this.game.board);
                 promotion = true;
             }
@@ -448,7 +465,7 @@ const app = Vue.createApp({
             const KingB = this.game.board[KingB_i][KingB_j];
 
             if (KingW.checked = Chess.isChecked('white', KingW_i, KingW_j, this.game.board)) {
-                if (this.game.currPlayer === 'white') {
+                if (this.game.currPlayer === 'white') { // Block any movement that would put the King in Check
                     this.game.board = boardCopy;
                     return;
                 } else {
@@ -457,7 +474,7 @@ const app = Vue.createApp({
             }
 
             if (KingB.checked = Chess.isChecked('black', KingB_i, KingB_j, this.game.board)) {
-                if (this.game.currPlayer === 'black') {
+                if (this.game.currPlayer === 'black') { // Block any movement that would put the King in Check
                     this.game.board = boardCopy;
                     return;
                 } else {
@@ -466,7 +483,7 @@ const app = Vue.createApp({
             }
 
             if (piece.char === 'P' && Math.abs(newI - i) === 2) {
-                piece.longMove = true;
+                piece.longMove = true; // For En Passant verification
             }
 
             piece.neverMoved = false;
@@ -517,7 +534,7 @@ const app = Vue.createApp({
                 this.game.draw = true;
 
                 this.game.result = '½–½';
-            } else if (Chess.insufficientMaterial(this.game.board)) {
+            } else if (Chess.insufficientMaterial(this.game.board)) { // Insufficient Material (K-K, KN-K, KB-K, KB-KB)
                 setTimeout(() => {
                     alert('Empate (insuficiência material)');
                     this.play();
@@ -527,7 +544,7 @@ const app = Vue.createApp({
                 this.game.draw = true;
 
                 this.game.result = '½–½';
-            } else if (this.game.noCaptureOrPawnsQ === 100) {
+            } else if (this.game.noCaptureOrPawnsQ === 100) { // 50 Movement rule
                 setTimeout(() => {
                     alert('Empate (50 movimentos)');
                     this.play();
@@ -537,7 +554,7 @@ const app = Vue.createApp({
                 this.game.draw = true;
 
                 this.game.result = '½–½';
-            } else if (Chess.threefoldRepetition(this.game.movements)) {
+            } else if (Chess.threefoldRepetition(this.game.movements)) { // 3 Repetition rule
                 setTimeout(() => {
                     alert('Empate (repetição de movimentos)');
                     this.play();
@@ -652,6 +669,10 @@ const app = Vue.createApp({
                     clearInterval(this.game.player2TimerFn);
                 }
             }
+
+            setTimeout(() => {
+                document.querySelector('.sidebar-right .history .movement:last-child')?.scrollIntoView({behavior: 'smooth', block: 'end'});
+            }, 100);
         },
 
         isPieceMove(i, j, newI, newJ) {
