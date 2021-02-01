@@ -329,7 +329,7 @@ const app = Vue.createApp({
             const img = document.createElement('img');
             img.src = document.querySelector(`#cell_${i}_${j} img`)?.src;
 
-            const cell = document.querySelector(`#cell_${i}_${j} img`)?.getBoundingClientRect();
+            const cell = document.querySelector(`#cell_${i}_${j}`)?.getBoundingClientRect();
 
             const x = e.clientX - cell.left;
             const y = e.clientY - cell.top;
