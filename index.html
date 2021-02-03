@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport"
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
-    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
 
     <meta name="description" content="Chess.js" />
     <meta name="keywords" content="html, html5, css, css3, js, vue, vuejs" />
@@ -38,7 +37,7 @@
             </header>
 
             <div class="gamemodes" v-if="!game.gamemode">
-                <button type="button" class="btn btn-info"
+                <button type="button" class="btn btn-primary"
                         @click="game.gamemode = 'smp'; selectMode = false; selectVariant = true; createGame = true;">
                     Multiplayer local</button>
                 <button type="button" class="btn btn-success"
@@ -47,6 +46,9 @@
                 <button type="button" class="btn btn-warning"
                         @click="game.gamemode = 'spec'; selectMode = false; selectVariant = true;">
                     Assistir partida</button>
+                <button type="button" class="btn btn-info"
+                        @click="game.gamemode = 'history';">
+                    Histórico de Partidas</button>
             </div>
 
             <div v-if="selectMode" class="hidden mode-selector" :class="{visible: true}">
@@ -94,6 +96,39 @@
                 </form>
             </div>
 
+            <div v-if="game.gamemode === 'history'">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th scope="col">#</th>
+                            <th>Data</th>
+                            <th>Modo</th>
+                            <th>Resultado</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(game, i) in matchHistory">
+                            <td>{{ i + 1 }}</td>
+                            <td>{{ new Date(game.date).toLocaleString() }}</td>
+                            <td>
+                                {{ {smp: 'Multiplayer Local', mp: 'Multiplayer Online', spec: 'Online (assistida)'}[game.gamemode] }}
+                            </td>
+                            <td>{{ game.result }}</td>
+                            <td>
+                                <!--<button type="button" class="btn btn-sm btn-outline-success">Assistir</button>-->
+                                <button type="button" class="btn btn-sm btn-outline-info ml-2"
+                                        @click="copyToClipboard(movementsToPGN(game.movements, game.result))">
+                                    Copiar PGN</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <button type="button" class="btn btn-secondary"
+                        @click="game.gamemode = null;">Voltar</button>
+            </div>
+
             <footer>
                 <p>Modscleo4 © <span :style="{display: 'none'}">2021</span>
                     <span class="hidden" :class="{visible: true}">{{ new Date().getFullYear() }}</span>
@@ -106,6 +141,9 @@
                 <p>Game ID: <a :href="`${page}/?gameid=${connection.gameid}&gamemode=mp`">{{ connection.gameid }}</a>
                 </p>
                 <p>Esperando pelo outro jogador...</p>
+
+                <button type="button" class="btn btn-secondary"
+                        @click="reset();">Cancelar</button>
             </div>
 
             <div v-if="game.gamemode === 'spec' && !connection.canStart" class="waiting-player">
@@ -261,6 +299,7 @@
     <script type="text/javascript"
             src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/js/bootstrap.min.js"></script>
 
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/stockfish.wasm@0.9.1/stockfish.js"></script>
     <script type="module" src="js/main.js"></script>
 </body>
 </html>

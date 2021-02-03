@@ -8,18 +8,19 @@ window.addEventListener('appinstalled', () => {
     console.log('A2HS installed');
 });
 
-let timerFn = null;
-
 const app = Vue.createApp({
     data: () => ({
         //page: '',
         page: '/chess',
         connection: {
-            socket: null,
+            //protocol: 'ws',
+            protocol: 'wss',
             //address: 'localhost:3000',
             address: 'chessjs-server.herokuapp.com',
+            socket: null,
             gameid: null,
             canStart: false,
+            secret: null,
         },
         game: {
             start: false,
@@ -78,20 +79,28 @@ const app = Vue.createApp({
 
             set theme(val) {
                 localStorage.setItem('theme', val);
-                document.querySelector('html').setAttribute('theme', val);
+                document.querySelector('html')?.setAttribute('theme', val);
             },
         },
     }),
 
     mounted() {
-        this.play();
-        this.connection.gameid = new URLSearchParams(new URL(window.location).search).get('gameid');
-        this.game.gamemode = new URLSearchParams(new URL(window.location).search).get('gamemode');
+        this.reset();
+        this.connection.gameid = new URLSearchParams(new URL(window.location.href).search).get('gameid');
+        this.game.gamemode = new URLSearchParams(new URL(window.location.href).search).get('gamemode');
+        this.connection.secret = localStorage.getItem('playerSecret');
 
         if (['mp', 'spec'].includes(this.game.gamemode)) {
             this.createGame = false;
             this.selectVariant = true;
         }
+    },
+
+    computed: {
+        matchHistory() {
+            const matchHistory = JSON.parse(localStorage.getItem('gameHistory'));
+            return matchHistory;
+        },
     },
 
     methods: {
@@ -103,6 +112,24 @@ const app = Vue.createApp({
             return `${Math.floor(s / 60).toString().padStart(2, '0')}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
         },
 
+        /**
+         *
+         * @param {string[]} movements
+         * @param {string} result
+         * @return {string}
+         */
+        movementsToPGN(movements, result) {
+            return movements.reduce((acc, m, i) => acc + (i % 2 == 0 ? `${i / 2 + 1}. ${m}` : ` ${m} `), '') + ` ${result}`;
+        },
+
+        /**
+         *
+         * @param {string} str
+         */
+        copyToClipboard(str) {
+            navigator.clipboard.writeText(str);
+        },
+
         takenPiecesW() {
             return this.game.takenPieces.filter(p => p.color === 'white');
         },
@@ -111,13 +138,18 @@ const app = Vue.createApp({
             return this.game.takenPieces.filter(p => p.color === 'black');
         },
 
-        play() {
+        reset() {
             if (this.game.movements.length > 0) {
                 const games = JSON.parse(localStorage.getItem('gameHistory') ?? '[]');
-                games.push({won: this.game.won, draw: this.game.draw, gamemode: this.game.gamemode, movements: this.game.movements, result: this.game.result});
+                games.push({date: new Date(), won: this.game.won, draw: this.game.draw, gamemode: this.game.gamemode, movements: this.game.movements, result: this.game.result});
 
                 localStorage.setItem('gameHistory', JSON.stringify(games));
             }
+
+            this.connection.socket?.readyState === this.connection.socket?.OPEN && this.connection.socket?.close();
+
+            clearInterval(this.game.player1TimerFn);
+            clearInterval(this.game.player2TimerFn);
 
             this.game.start = false;
             this.game.gamemode = null;
@@ -149,6 +181,8 @@ const app = Vue.createApp({
 
             !this.firstRun && history.pushState({}, 'Chess', `${this.page}/`);
             this.firstRun = false;
+
+            history.pushState({}, 'Chess', `${this.page}/`);
         },
 
         startGame() {
@@ -188,16 +222,17 @@ const app = Vue.createApp({
                 },
 
                 createGame: async (message) => {
-                    const {gameid, game: {playerColor, currPlayer}} = message;
+                    const {gameid, game: {playerColor, currPlayer, secret}} = message;
 
                     this.connection.gameid = gameid;
                     this.game.currPlayer = currPlayer;
                     this.game.playerColor = playerColor;
-                    history.pushState({}, `Chess Game ${gameid}`, `${this.page}/?gameid=${gameid}`);
+                    history.pushState({}, `Chess Game ${gameid}`, `${this.page}/?gameid=${gameid}&gamemode=mp`);
+                    localStorage.setItem('playerSecret', secret);
                 },
 
                 joinGame: async (message) => {
-                    const {game: {timePlayer, timeInc, movements, playerColor, currPlayer, player1Timer, player2Timer}} = message;
+                    const {game: {timePlayer, timeInc, movements, playerColor, currPlayer, player1Timer, player2Timer, secret}} = message;
 
                     this.game.playerColor = this.game.currPlayer = 'white';
 
@@ -215,6 +250,7 @@ const app = Vue.createApp({
 
                     this.game.player1Timer = player1Timer;
                     this.game.player2Timer = player2Timer;
+                    localStorage.setItem('playerSecret', secret);
                 },
 
                 start: async (message) => {
@@ -228,52 +264,47 @@ const app = Vue.createApp({
                     const {gameid} = message;
 
                     alert(`Jogo ${gameid} não encontrado.`);
-                    this.play();
+                    this.reset();
+                    this.connection.secret = null;
+                    localStorage.removeItem('playerSecret');
                 },
 
                 gameFull: async (message) => {
                     const {gameid} = message;
 
                     alert(`O jogo ${gameid} está cheio.`);
-                    this.play();
+                    this.reset();
+                    this.connection.secret = null;
+                    localStorage.removeItem('playerSecret');
                 },
 
                 alreadyConnected: async (message) => {
                     const {gameid} = message;
 
-                    if (confirm(`Você já está no jogo ${gameid}. Deseja reconectar?`)) {
-                        socket.close();
-                        this.loginServer();
-                        return;
-                    }
-
-                    this.play();
+                    alert(`Você já está no jogo ${gameid}.`);
+                    this.reset();
                 },
 
                 playerDisconnected: async (message) => {
-                    if (this.game.gamemode === 'mp' && !confirm('O outro jogador foi desconectado. Deseja aguardá-lo?')) {
-                        return this.play();
-                    }
-
                     this.connection.canStart = false;
                 },
             };
 
-            const socket = createSocket(this.connection.address, commands);
+            const socket = createSocket(this.connection.protocol, this.connection.address, commands);
             this.connection.socket = socket;
 
             await new Promise((resolve, reject) => {
                 if (socket.readyState === socket.OPEN) {
-                    return resolve();
+                    return resolve(true);
                 }
 
                 socket.addEventListener('open', () => {
-                    resolve();
+                    resolve(true);
                 });
             });
 
             socket.addEventListener('close', () => {
-                alert('Conexão com o servidor perdida. Tentando reconectar...');
+                socket.readyState === socket.OPEN && socket.close();
                 this.loginServer();
             });
 
@@ -289,6 +320,7 @@ const app = Vue.createApp({
                     command: 'joinGame',
                     gameid: this.connection.gameid,
                     playerName: this.playerName,
+                    secret: this.connection.secret,
                 }));
             } else {
                 socket.send(JSON.stringify({
@@ -331,8 +363,8 @@ const app = Vue.createApp({
 
             const cell = document.querySelector(`#cell_${i}_${j}`)?.getBoundingClientRect();
 
-            const x = e.clientX - cell.left;
-            const y = e.clientY - cell.top;
+            const x = e.clientX - cell?.left;
+            const y = e.clientY - cell?.top;
 
             e.dataTransfer.dropEffect = 'move';
             e.dataTransfer.setDragImage(img, x, y);
@@ -495,7 +527,7 @@ const app = Vue.createApp({
             if (Chess.isCheckMate('white', KingW_i, KingW_j, this.game.board, this.game.lastMoved)) {
                 setTimeout(() => {
                     alert('Pretas venceram');
-                    this.play();
+                    this.reset();
                 }, 500);
 
                 this.won = 'black';
@@ -511,7 +543,7 @@ const app = Vue.createApp({
             } else if (Chess.isCheckMate('black', KingB_i, KingB_j, this.game.board, this.game.lastMoved)) {
                 setTimeout(() => {
                     alert('Brancas venceram');
-                    this.play();
+                    this.reset();
                 }, 500);
 
                 this.game.won = 'white';
@@ -526,8 +558,8 @@ const app = Vue.createApp({
                 checkMate = true;
             } else if (Chess.isStaleMate('black', KingB_i, KingB_j, this.game.board, this.game.lastMoved) || Chess.isStaleMate('white', KingW_i, KingW_j, this.game.board, this.game.lastMoved)) {
                 setTimeout(() => {
-                    alert('Draw');
-                    this.play();
+                    alert('Empate (afogamento)');
+                    this.reset();
                 }, 500);
 
                 this.game.won = null;
@@ -537,7 +569,7 @@ const app = Vue.createApp({
             } else if (Chess.insufficientMaterial(this.game.board)) { // Insufficient Material (K-K, KN-K, KB-K, KB-KB)
                 setTimeout(() => {
                     alert('Empate (insuficiência material)');
-                    this.play();
+                    this.reset();
                 }, 500);
 
                 this.game.won = null;
@@ -547,7 +579,7 @@ const app = Vue.createApp({
             } else if (this.game.noCaptureOrPawnsQ === 100) { // 50 Movement rule
                 setTimeout(() => {
                     alert('Empate (50 movimentos)');
-                    this.play();
+                    this.reset();
                 }, 500);
 
                 this.game.won = null;
@@ -557,7 +589,7 @@ const app = Vue.createApp({
             } else if (Chess.threefoldRepetition(this.game.movements)) { // 3 Repetition rule
                 setTimeout(() => {
                     alert('Empate (repetição de movimentos)');
-                    this.play();
+                    this.reset();
                 }, 500);
 
                 this.game.won = null;
@@ -590,7 +622,7 @@ const app = Vue.createApp({
             mov += `${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][newJ]}${8 - newI}`;
 
             if (enPassant) {
-                mov += ' e.p';
+                mov += ' e.p.';
             }
 
             if (promotion) {
@@ -623,50 +655,47 @@ const app = Vue.createApp({
 
             this.game.currentMove = [[i, j], [newI, newJ]];
 
-            if (this.game.movements.length >= 2) {
+            this.game.player1TimerFn && clearInterval(this.game.player1TimerFn);
+            this.game.player2TimerFn && clearInterval(this.game.player2TimerFn);
+            this.game.player1TimerFn = null;
+            this.game.player2TimerFn = null;
+
+            if (this.game.result) {
+                localStorage.removeItem('playerSecret');
+                this.connection.secret = null;
+            }
+
+            if (this.game.movements.length >= 2 && !this.game.result) {
                 if (this.game.currPlayer === 'white') {
                     this.game.player1TimerFn = setInterval(() => {
                         this.game.player1Timer++;
                         if (this.game.player1Timer >= this.game.timePlayer * 60) {
                             setTimeout(() => {
                                 alert('Pretas venceram (tempo esgotado)');
-                                this.play();
+                                this.reset();
                             }, 500);
-
-                            clearInterval(this.game.player1TimerFn);
-                            clearInterval(this.game.player2TimerFn);
 
                             this.game.won = 'black';
                             this.game.result = '0–1';
                         }
                     }, 1000);
 
-                    this.game.player2TimerFn && clearInterval(this.game.player2TimerFn) && (this.game.player2TimerFn = null);
-                    this.game.player2Timer && (this.game.player2Timer -= this.game.timeInc);
+                    this.game.movements.length > 2 && (this.game.player2Timer -= this.game.timeInc);
                 } else {
                     this.game.player2TimerFn = setInterval(() => {
                         this.game.player2Timer++;
                         if (this.game.player2Timer >= this.game.timePlayer * 60) {
                             setTimeout(() => {
                                 alert('Brancas venceram (tempo esgotado)');
-                                this.play();
+                                this.reset();
                             }, 500);
-
-                            clearInterval(this.game.player1TimerFn);
-                            clearInterval(this.game.player2TimerFn);
 
                             this.game.won = 'white';
                             this.game.result = '1–0';
                         }
                     }, 1000);
 
-                    this.game.player1TimerFn && clearInterval(this.game.player1TimerFn) && (this.game.player1TimerFn = null);
-                    this.game.player1Timer && (this.game.player1Timer -= this.game.timeInc);
-                }
-
-                if (this.game.result) {
-                    clearInterval(this.game.player1TimerFn);
-                    clearInterval(this.game.player2TimerFn);
+                    this.game.movements.length > 2 && (this.game.player1Timer -= this.game.timeInc);
                 }
             }
 
