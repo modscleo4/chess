@@ -181,8 +181,6 @@ const app = Vue.createApp({
 
             !this.firstRun && history.pushState({}, 'Chess', `${this.page}/`);
             this.firstRun = false;
-
-            history.pushState({}, 'Chess', `${this.page}/`);
         },
 
         startGame() {
