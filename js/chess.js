@@ -323,7 +323,7 @@ export function threefoldRepetition(fen) {
     if (fen.length >= 6) {
         for (let i = 0; i < fen.length; i++) {
             const currMov = fen[i];
-            let dup = 0;
+            let dup = 1;
             for (let j = i + 1; j < fen.length; j++) {
                 const comparMov = fen[j];
 
