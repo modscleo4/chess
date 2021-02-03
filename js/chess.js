@@ -317,16 +317,25 @@ export function insufficientMaterial(board) {
 
 /**
  *
- * @param {string[]} movements
+ * @param {string[]} fen
  */
-export function threefoldRepetition(movements) {
-    if (movements.length >= 12 && movements.length % 2 === 0) {
-        let i = movements.length - 12;
-        debugger;
-        return movements[i + 0] === movements[i + 4] && movements[i + 4] === movements[i + 8]
-            && movements[i + 2] === movements[i + 6] && movements[i + 6] === movements[i + 10]
-            && movements[i + 1] === movements[i + 5] && movements[i + 5] === movements[i + 9]
-            && movements[i + 3] === movements[i + 7] && movements[i + 7] === movements[i + 11];
+export function threefoldRepetition(fen) {
+    if (fen.length >= 6) {
+        for (let i = 0; i < fen.length; i++) {
+            const currMov = fen[i];
+            let dup = 0;
+            for (let j = i + 1; j < fen.length; j++) {
+                const comparMov = fen[j];
+
+                if (currMov.replace(/\d+ \d+$/, '') === comparMov.replace(/\d+ \d+$/, '')) {
+                    dup++;
+                }
+            }
+
+            if (dup === 3) {
+                return true;
+            }
+        }
     }
 
     return false;

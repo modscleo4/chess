@@ -36,6 +36,7 @@ const app = Vue.createApp({
             lastMoved: null,
             takenPieces: [],
             movements: [],
+            fen: ['rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'],
             currentMove: [],
             noCaptureOrPawnsQ: 0,
             result: null,
@@ -166,6 +167,7 @@ const app = Vue.createApp({
             this.game.lastMoved = null;
             this.game.takenPieces = [];
             this.game.movements = [];
+            this.game.fen = ['rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'];
             this.game.currentMove = [];
             this.game.noCaptureOrPawnsQ = 0;
             this.game.result = null;
@@ -522,6 +524,126 @@ const app = Vue.createApp({
             const audio = new Audio(capture ? 'assets/capture.ogg' : 'assets/move.ogg');
             audio.play();
 
+            const duplicate = Chess.findDuplicateMovement(piece, i, j, newI, newJ, boardCopy, this.game.lastMoved);
+            let mov = `${piece.char !== 'P' ? piece.char : ''}`;
+
+            if (duplicate) {
+                if (!duplicate.sameFile) {
+                    mov += ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j];
+                } else if (!duplicate.sameRank) {
+                    mov += 8 - i;
+                } else {
+                    mov += `${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j]}${8 - i}`;
+                }
+            }
+
+            if (capture) {
+                if (piece.char === 'P') {
+                    mov += ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j];
+                }
+
+                mov += 'x';
+            }
+
+            mov += `${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][newJ]}${8 - newI}`;
+
+            if (enPassant) {
+                mov += ' e.p.';
+            }
+
+            if (promotion) {
+                mov += this.game.promoteTo;
+            }
+
+            if (checkMate) {
+                this.game.movements.push(mov + '#');
+            } else if (check) {
+                this.game.movements.push(mov + '+');
+            } else if (castling) {
+                this.game.movements.push(['0-0', '0-0-0'][castling - 1]);
+            } else {
+                this.game.movements.push(mov);
+            }
+
+            if (!capture && piece.char !== 'P') {
+                this.game.noCaptureOrPawnsQ++;
+            } else {
+                this.game.noCaptureOrPawnsQ = 0;
+            }
+
+            this.game.currPlayer = (this.game.currPlayer === 'white' ? 'black' : 'white');
+
+            if (this.game.gamemode === 'smp') {
+                this.game.playerColor = this.game.currPlayer;
+            }
+
+            let fen = '';
+            for (let x = 0; x < 8; x++) {
+                let empty = 0;
+                for (let y = 0; y < 8; y++) {
+                    const p = this.game.board[x][y];
+                    if (!p) {
+                        empty++;
+                        continue;
+                    }
+
+                    if (empty) {
+                        fen += empty;
+                        empty = 0;
+                    }
+
+                    fen += p.color === 'black' ? p.char.toLowerCase() : p.char;
+                }
+
+                if (empty) {
+                    fen += empty;
+                    empty = 0;
+                }
+
+                x < 7 && (fen += '/');
+            }
+
+            fen += ` ${this.game.currPlayer[0]}`;
+
+            let fenCastling = ' ';
+            if (KingW.neverMoved) {
+                if (this.game.board[7][0]?.neverMoved) {
+                    fenCastling += 'Q';
+                }
+
+                if (this.game.board[7][7]?.neverMoved) {
+                    fenCastling += 'K';
+                }
+            }
+
+            if (KingB.neverMoved) {
+                if (this.game.board[0][0]?.neverMoved) {
+                    fenCastling += 'q';
+                }
+
+                if (this.game.board[0][7]?.neverMoved) {
+                    fenCastling += 'k';
+                }
+            }
+
+            if (fenCastling === ' ') {
+                fenCastling = ' -';
+            }
+
+            fen += fenCastling;
+
+            // This is not FEN because we are only recording true En Passant (this is for threefold repetition)
+            if (piece.char === 'P' && piece.longMove && (piece.color === 'white' ? newI === 4 : newI === 3) && (this.game.board[newI][newJ - 1]?.char === 'P' && this.game.board[newI][newJ + 1]?.color !== piece.color || this.game.board[newI][newJ + 1]?.char === 'P' && this.game.board[newI][newJ + 1]?.color !== piece.color)) {
+                fen += ` ${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][newJ]}${8 - newI + (piece.color === 'white' ? -1 : 1)}`;
+            } else {
+                fen += ' -';
+            }
+
+            fen += ` ${this.game.noCaptureOrPawnsQ}`;
+            fen += ` ${Math.floor(this.game.movements.length / 2 + 1)}`;
+
+            this.game.fen.push(fen);
+
             if (Chess.isCheckMate('white', KingW_i, KingW_j, this.game.board, this.game.lastMoved)) {
                 setTimeout(() => {
                     alert('Pretas venceram');
@@ -584,9 +706,9 @@ const app = Vue.createApp({
                 this.game.draw = true;
 
                 this.game.result = '½–½';
-            } else if (Chess.threefoldRepetition(this.game.movements)) { // 3 Repetition rule
+            } else if (Chess.threefoldRepetition(this.game.fen)) { // 3 Repetition rule
                 setTimeout(() => {
-                    alert('Empate (repetição de movimentos)');
+                    alert('Empate (repetição tripla)');
                     this.reset();
                 }, 500);
 
@@ -594,59 +716,6 @@ const app = Vue.createApp({
                 this.game.draw = true;
 
                 this.game.result = '½–½';
-            }
-
-            const duplicate = Chess.findDuplicateMovement(piece, i, j, newI, newJ, boardCopy, this.game.lastMoved);
-            let mov = `${piece.char !== 'P' ? piece.char : ''}`;
-
-            if (duplicate) {
-                if (!duplicate.sameFile) {
-                    mov += ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j];
-                } else if (!duplicate.sameRank) {
-                    mov += 8 - i;
-                } else {
-                    mov += `${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j]}${8 - i}`;
-                }
-            }
-
-            if (capture) {
-                if (piece.char === 'P') {
-                    mov += ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j];
-                }
-
-                mov += 'x';
-            }
-
-            mov += `${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][newJ]}${8 - newI}`;
-
-            if (enPassant) {
-                mov += ' e.p.';
-            }
-
-            if (promotion) {
-                mov += this.game.promoteTo;
-            }
-
-            if (checkMate) {
-                this.game.movements.push(mov + '#');
-            } else if (check) {
-                this.game.movements.push(mov + '+');
-            } else if (castling) {
-                this.game.movements.push(['0-0', '0-0-0'][castling - 1]);
-            } else {
-                this.game.movements.push(mov);
-            }
-
-            if (!capture || piece.char !== 'P') {
-                this.game.noCaptureOrPawnsQ++;
-            } else {
-                this.game.noCaptureOrPawnsQ = 0;
-            }
-
-            this.game.currPlayer = (this.game.currPlayer === 'white' ? 'black' : 'white');
-
-            if (this.game.gamemode === 'smp') {
-                this.game.playerColor = this.game.currPlayer;
             }
 
             this.game.lastMoved = piece;
