@@ -9,6 +9,7 @@
     --text-color-hover: rgb(141, 128, 194);
     --link-color: rgb(236, 236, 236);
     --link-color-hover: rgb(153, 138, 208);
+    --link-color-active: rgb(75, 54, 170);
 
     --input-background-color: rgb(62, 62, 62);
     --input-border-color: rgb(88, 88, 88);
@@ -48,6 +49,7 @@
         --text-color-hover: rgb(141, 128, 194);
         --link-color: rgb(236, 236, 236);
         --link-color-hover: rgb(153, 138, 208);
+        --link-color-active: rgb(75, 54, 170);
 
         --input-background-color: rgb(62, 62, 62);
         --input-border-color: rgb(88, 88, 88);

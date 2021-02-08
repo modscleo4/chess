@@ -116,7 +116,8 @@
                             </td>
                             <td>{{ game.result }}</td>
                             <td>
-                                <!--<button type="button" class="btn btn-sm btn-outline-success">Assistir</button>-->
+                                <button type="button" class="btn btn-sm btn-outline-success"
+                                        @click="watch(game)">Assistir</button>
                                 <button type="button" class="btn btn-sm btn-outline-info ml-2"
                                         @click="copyToClipboard(movementsToPGN(game.movements, game.result))">
                                     Copiar PGN</button>
@@ -152,7 +153,7 @@
                 <p>Esperando pelos jogadores...</p>
             </div>
 
-            <div v-if="((game.gamemode === 'mp' || game.gamemode === 'spec') && connection.canStart) || game.gamemode === 'smp'"
+            <div v-if="(['mp', 'spec'].includes(game.gamemode) && connection.canStart) || ['smp', 'analysis'].includes(game.gamemode)"
                  class="content">
                 <div>
 
@@ -163,10 +164,10 @@
                         <tbody>
                             <tr v-for="(board_row, i) in game.board" :key="i">
                                 <td :id="`cell_${i}_${j}`" v-for="(board_cell, j) in board_row" :key="j"
-                                    :class="{'clickable': gamemode !== 'spec' && (board_cell?.color === game.playerColor && game.playerColor === game.currPlayer),
+                                    :class="{'clickable': !game._board && !['analysis', 'spec'].includes(game.gamemode) && (board_cell?.color === game.playerColor && game.playerColor === game.currPlayer),
                                          'moved': !!game.currentMove.find(([_i, _j]) => _i === i && _j === j),
                                          'checked': board_cell?.checked}"
-                                    :draggable="game.gamemode !== 'spec' && (board_cell?.color === game.playerColor && game.playerColor === game.currPlayer)"
+                                    :draggable="!game._board && !['analysis', 'spec'].includes(game.gamemode) && (board_cell?.color === game.playerColor && game.playerColor === game.currPlayer)"
                                     @drag="dragPiece(i, j)"
                                     @dragstart="setDragImage(i, j, $event)" @dragend="dragEnd(i, j)"
                                     @dragover.prevent="dragOver(i, j)" @dragenter.prevent=""
@@ -244,49 +245,67 @@
                 </div>
 
                 <div class="sidebar-right">
-                    <div>
-                        <h1 class="player-name" :class="{'current-player': game.currPlayer !== game.playerColor}">
-                            <span>{{ game.playerNames[game.playerColor === 'white' ? 'black' : 'white'] }}</span>
-                            <span class="timer">
-                                {{ parseS(game.timePlayer * 60 -{white: game.player2Timer, black: game.player1Timer}[game.playerColor]) }}
-                            </span>
-                        </h1>
+                    <div></div>
 
-                        <ul>
-                            <li v-for="piece in (game.playerColor === 'white' ? takenPiecesW() : takenPiecesB())">
-                                <img :src="`assets/${piece.image}.png`" alt="" />
-                            </li>
+                    <div class="sidebar-info">
+                        <div class="player">
+                            <div class="player-name" :class="{'current-player': game.currPlayer !== game.playerColor}">
+                                <span></span>
+                                <span>{{ game.playerNames[game.playerColor === 'white' ? 'black' : 'white'] }}</span>
+                                <span class="timer">
+                                    {{ parseS(game.timePlayer * 60 -{white: game.player2Timer, black: game.player1Timer}[game.playerColor]) }}
+                                </span>
+                            </div>
 
-                            <li class="advantage">
-                                {{ pointsAdvantage(game.playerColor === 'white' ? 'black' : 'white') }}
-                            </li>
-                        </ul>
+                            <ul class="pieces">
+                                <li v-for="piece in (game.playerColor === 'white' ? takenPiecesW() : takenPiecesB())">
+                                    <img :src="`assets/${piece.image}.png`" alt="" />
+                                </li>
+
+                                <li class="advantage">
+                                    {{ pointsAdvantage(game.playerColor === 'white' ? 'black' : 'white') }}
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="history">
+                            <template v-for="(movement, i) in game.movements">
+                                <span v-if="i % 2 === 0" class="rowid">{{ i / 2 + 1 }}</span>
+                                <span class="movement"
+                                      :class="{current: i === game.currMove, clickable: true}"
+                                      @click="boardAt(i)">{{ movement }}</span>
+                            </template>
+
+                            <span v-if="game.result" class="result">{{ game.result }}</span>
+                        </div>
+
+                        <div class="player">
+                            <ul class="pieces">
+                                <li v-for="piece in (game.playerColor === 'white' ? takenPiecesB() : takenPiecesW())">
+                                    <img :src="`assets/${piece.image}.png`" alt="" />
+                                </li>
+
+                                <li class="advantage">{{ pointsAdvantage(game.playerColor) }}</li>
+                            </ul>
+
+                            <div class="player-name" :class="{'current-player': game.currPlayer === game.playerColor}">
+                                <span></span>
+                                <span>{{ game.playerNames[game.playerColor] }}</span>
+                                <span class="timer">
+                                    {{ parseS(game.timePlayer * 60 - {white: game.player1Timer, black: game.player2Timer}[game.playerColor]) }}
+                                </span>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="history">
-                        <template v-for="(movement, i) in game.movements">
-                            <span v-if="i % 2 === 0" class="rowid">{{ i / 2 + 1 }}</span>
-                            <span class="movement">{{ movement }}</span>
-                        </template>
-
-                        <span v-if="game.result" class="result">{{ game.result }}</span>
-                    </div>
-
-                    <div>
-                        <ul>
-                            <li v-for="piece in (game.playerColor === 'white' ? takenPiecesB() : takenPiecesW())">
-                                <img :src="`assets/${piece.image}.png`" alt="" />
-                            </li>
-
-                            <li class="advantage">{{ pointsAdvantage(game.playerColor) }}</li>
-                        </ul>
-
-                        <h1 class="player-name" :class="{'current-player': game.currPlayer === game.playerColor}">
-                            <span>{{ game.playerNames[game.playerColor] }}</span>
-                            <span class="timer">
-                                {{ parseS(game.timePlayer * 60 - {white: game.player1Timer, black: game.player2Timer}[game.playerColor]) }}
-                            </span>
-                        </h1>
+                    <div v-if="['smp', 'mp'].includes(game.gamemode)" class="controls">
+                        <i v-if="game.fen.length > 1 && (game.gamemode === 'smp' || game.currPlayer !== game.playerColor)"
+                           class="fa fa-undo"
+                           @click="requestUndo()"
+                           title="Voltar jogada"></i>
+                        <i class="fa fa-flag" @click="forfeit()" title="Desistir"></i>
+                        <i v-if="game.canRequestDraw" class="fa fa-handshake-o" @click="requestDraw()"
+                           title="Empate"></i>
                     </div>
                 </div>
             </div>

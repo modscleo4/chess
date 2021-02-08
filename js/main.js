@@ -33,6 +33,7 @@ const app = Vue.createApp({
             won: null,
             draw: false,
             board: null,
+            _board: null,
             lastMoved: null,
             takenPieces: [],
             movements: [],
@@ -45,6 +46,8 @@ const app = Vue.createApp({
             player1TimerFn: null,
             player2Timer: 0,
             player2TimerFn: null,
+            canRequestDraw: true,
+            currMove: -1,
         },
         selectVariant: false,
         selectMode: false,
@@ -95,6 +98,28 @@ const app = Vue.createApp({
             this.createGame = false;
             this.selectVariant = true;
         }
+
+        document.addEventListener('keydown', e => {
+            const listeners = {
+                ArrowUp: () => {
+                    this.boardAt(-1);
+                },
+
+                ArrowLeft: () => {
+                    this.boardAt(this.game.currMove - 1);
+                },
+
+                ArrowRight: () => {
+                    this.boardAt(this.game.currMove + 1);
+                },
+
+                ArrowDown: () => {
+                    this.boardAt(this.game.movements.length - 1);
+                },
+            };
+
+            e.key in listeners && listeners[e.key]();
+        });
     },
 
     computed: {
@@ -132,11 +157,13 @@ const app = Vue.createApp({
         },
 
         takenPiecesW() {
-            return this.game.takenPieces.filter(p => p.color === 'white');
+            const sortArray = ['P', 'N', 'B', 'R', 'Q'];
+            return (this.game.takenPieces[this.game.currMove]?.filter(p => p.color === 'white') ?? []).sort((a, b) => sortArray.indexOf(a.char) - sortArray.indexOf(b.char));
         },
 
         takenPiecesB() {
-            return this.game.takenPieces.filter(p => p.color === 'black');
+            const sortArray = ['P', 'N', 'B', 'R', 'Q'];
+            return (this.game.takenPieces[this.game.currMove]?.filter(p => p.color === 'black') ?? []).sort((a, b) => sortArray.indexOf(a.char) - sortArray.indexOf(b.char));
         },
 
         reset() {
@@ -171,6 +198,8 @@ const app = Vue.createApp({
             this.game.currentMove = [];
             this.game.noCaptureOrPawnsQ = 0;
             this.game.result = null;
+            this.game.canRequestDraw = true;
+            this.game.currMove = -1;
 
             this.selectVariant = false;
             this.selectMode = false;
@@ -206,14 +235,74 @@ const app = Vue.createApp({
             this.game.start = true;
         },
 
+        watch(game) {
+            this.game.gamemode = 'analysis';
+            this.game.start = true;
+            this.game.timePlayer = Infinity;
+
+            game.movements.forEach(movement => {
+                const {i, j, newI, newJ, promoteTo} = Chess.pgnToCoord(movement, this.game.board, this.game.currPlayer, this.game.lastMoved);
+
+                this.game.promoteTo = promoteTo;
+                this.commitMovement(i, j, newI, newJ, {checkValid: false, playSound: false, scrollToMovement: false});
+            });
+
+            this.game.currMove = game.movements.length - 1;
+
+            setTimeout(() => {
+                document.querySelector('.sidebar-right .history .result')?.scrollIntoView({behavior: 'smooth', block: 'end'});
+            }, 100);
+        },
+
+        /**
+         *
+         * @param {number} n
+         * @param {boolean} [override=false]
+         */
+        boardAt(n, override = false) {
+            if (n < -1 || n > this.game.movements.length - 1) {
+                return;
+            }
+
+            if (['smp', 'mp', 'spec'].includes(this.game.gamemode) && !this.game._board && !override) {
+                this.game._board = this.game.board.map(r => [...r]);
+            }
+
+            if (n === -1) {
+                this.regenerateArray(this.game.fen[0]);
+                this.game.currentMove = [];
+                this.game.currMove = n;
+                return;
+            }
+
+            this.regenerateArray(this.game.fen[n]);
+            this.game.currentMove = [];
+
+            const {i, j, newI, newJ, promoteTo} = Chess.pgnToCoord(this.game.movements[n], this.game.board, this.game.currPlayer, this.game.lastMoved);
+
+            this.game.promoteTo = promoteTo;
+            this.commitMovement(i, j, newI, newJ, {checkValid: false, saveMovement: false});
+            this.game.currMove = n;
+
+            if (!override && this.game._board && this.game.movements.length - 1 === n) {
+                this.game.board = this.game._board;
+                this.game._board = null;
+            }
+        },
+
         async loginServer() {
             localStorage.setItem('playerName', this.playerName);
 
             const commands = {
                 commitMovement: async (message) => {
+                    if (this.game._board) {
+                        this.game.board = this.game._board;
+                        this.game._board = null;
+                    }
+
                     const {i, j, newI, newJ, game: {currPlayer, promoteTo, player1Timer, player2Timer}} = message;
                     this.game.promoteTo = promoteTo;
-                    this.commitMovement(i, j, newI, newJ, false);
+                    this.commitMovement(i, j, newI, newJ, {checkValid: false});
 
                     this.game.currPlayer = currPlayer;
 
@@ -240,7 +329,7 @@ const app = Vue.createApp({
                     this.game.timeInc = timeInc;
 
                     movements.forEach(({i, j, newI, newJ}) => {
-                        this.commitMovement(i, j, newI, newJ, false);
+                        this.commitMovement(i, j, newI, newJ, {checkValid: false, playSound: false});
                     });
 
                     const lastMovement = movements[movements.length - 1];
@@ -288,6 +377,54 @@ const app = Vue.createApp({
                 playerDisconnected: async (message) => {
                     this.connection.canStart = false;
                 },
+
+                requestUndo: async (message) => {
+                    this.connection.socket.send(JSON.stringify({
+                        command: confirm('Voltar jogada?') ? 'approveUndo' : 'rejectUndo',
+                    }));
+                },
+
+                undo: async (message) => {
+                    this.boardAt(this.game.currMove - 1, true);
+                    this.game.movements.pop();
+                    this.game.fen.pop();
+                    this.game.takenPieces.pop();
+                },
+
+                forfeit: async (message) => {
+                    const {won} = message;
+
+                    if (won === 'black') {
+                        this.result('Pretas venceram', 'desistência');
+
+                        this.game.result = '0-1';
+
+                        this.game.won = 'black';
+                        this.game.draw = false;
+                    } else {
+                        this.result('Brancas venceram', 'desistência');
+
+                        this.game.result = '1-0';
+
+                        this.game.won = 'white';
+                        this.game.draw = false;
+                    }
+                },
+
+                requestDraw: async (message) => {
+                    this.connection.socket.send(JSON.stringify({
+                        command: confirm('Empatar?') ? 'approveDraw' : 'rejectDraw',
+                    }));
+                },
+
+                draw: async (message) => {
+                    this.result('Empate', 'solicitado');
+
+                    this.game.result = '½-½';
+
+                    this.game.won = null;
+                    this.game.draw = true;
+                }
             };
 
             const socket = createSocket(this.connection.protocol, this.connection.address, commands);
@@ -330,19 +467,31 @@ const app = Vue.createApp({
             }
         },
 
-        regenerateArray() {
-            this.game.board = Chess.generateArray();
+        /**
+         *
+         * @param {string} fen
+         */
+        regenerateArray(fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1') {
+            this.game.lastMoved = null;
+            this.game.board = Chess.generateArray(fen);
+            this.game.currPlayer = / (?<CurrPlayer>[wb])/.exec(fen)?.groups.CurrPlayer === 'w' ? 'white' : 'black';
+            this.game.gamemode === 'smp' && (this.game.playerColor = this.game.currPlayer);
+
+            const enPassant = / [wb] K?Q?k?q? (?<EnPassant>(?:-|[a-z]\d))/.exec(fen)?.groups.EnPassant;
+            if (enPassant && enPassant !== '-') {
+                const i = (8 - parseInt(enPassant[enPassant.length - 1])) === 5 ? 4 : 3;
+                const j = 'abcdefgh'.indexOf(enPassant[0]);
+
+                this.game.lastMoved = this.game.board[i][j];
+            }
         },
 
         pointsAdvantage(playerColor) {
-            const piecesW = this.takenPiecesB().reduce((acc, p) => {(p.char === 'Q' ? acc.Q += 9 : p.char === 'R' ? acc.R += 5 : p.char === 'N' ? acc.N += 3 : p.char === 'B' ? acc.B += 3 : p.char === 'P' ? acc.P += 1 : 0); return acc;}, {Q: 0, R: 0, N: 0, B: 0, P: 0});
-            const piecesB = this.takenPiecesW().reduce((acc, p) => {(p.char === 'Q' ? acc.Q += 9 : p.char === 'R' ? acc.R += 5 : p.char === 'N' ? acc.N += 3 : p.char === 'B' ? acc.B += 3 : p.char === 'P' ? acc.P += 1 : 0); return acc;}, {Q: 0, R: 0, N: 0, B: 0, P: 0});
+            const pointsW = this.takenPiecesB().reduce((acc, p) => acc + (p.char === 'Q' ? 9 : p.char === 'R' ? 5 : p.char === 'N' ? 3 : p.char === 'B' ? 3 : p.char === 'P' ? 1 : 0), 0);
+            const pointsB = this.takenPiecesW().reduce((acc, p) => acc + (p.char === 'Q' ? 9 : p.char === 'R' ? 5 : p.char === 'N' ? 3 : p.char === 'B' ? 3 : p.char === 'P' ? 1 : 0), 0);
 
-            const pointsW = Math.max(piecesW.Q - piecesB.Q, 0) + Math.max(piecesW.R - piecesB.R, 0) + Math.max(piecesW.N - piecesB.N, 0) + Math.max(piecesW.B - piecesB.B, 0) + Math.max(piecesW.P - piecesB.P, 0);
-            const pointsB = Math.max(piecesB.Q - piecesW.Q, 0) + Math.max(piecesB.R - piecesW.R, 0) + Math.max(piecesB.N - piecesW.N, 0) + Math.max(piecesB.B - piecesW.B, 0) + Math.max(piecesB.P - piecesW.P, 0);
-
-            return playerColor === 'white' ? (pointsW > pointsB ? `+${pointsW}` : '') :
-                playerColor === 'black' ? (pointsB > pointsW ? `+${pointsB}` : '') : '';
+            return playerColor === 'white' ? (pointsW > pointsB ? `+${pointsW - pointsB}` : '') :
+                playerColor === 'black' ? (pointsB > pointsW ? `+${pointsB - pointsW}` : '') : '';
         },
 
         dragPiece(i, j) {
@@ -361,7 +510,7 @@ const app = Vue.createApp({
             const img = document.createElement('img');
             img.src = document.querySelector(`#cell_${i}_${j} img`)?.src;
 
-            const cell = document.querySelector(`#cell_${i}_${j}`)?.getBoundingClientRect();
+            const cell = document.querySelector(`#cell_${i}_${j} img`)?.getBoundingClientRect();
 
             const x = e.clientX - cell?.left;
             const y = e.clientY - cell?.top;
@@ -409,7 +558,7 @@ const app = Vue.createApp({
                 } while (!['Q', 'B', 'N', 'R'].includes(this.game.promoteTo));
             }
 
-            if (this.connection.socket) {
+            if (this.connection.socket && !this.game._board) {
                 this.connection.socket.send(JSON.stringify({
                     command: 'commitMovement',
                     i: this.drag.i,
@@ -433,10 +582,18 @@ const app = Vue.createApp({
          * @param {number} j
          * @param {number} newI
          * @param {number} newJ
-         * @param {boolean} checkValid
+         * @param {Object} options
+         * @param {boolean} [options.checkValid=true]
+         * @param {boolean} [options.saveMovement=true]
+         * @param {boolean} [options.playSound=true]
+         * @param {boolean} [options.scrollToMovement=true]
          */
-        commitMovement(i, j, newI, newJ, checkValid = true) {
+        commitMovement(i, j, newI, newJ, {checkValid = true, saveMovement = true, playSound = true, scrollToMovement = true} = {}) {
             const piece = this.game.board[i][j];
+
+            if (this.game.gamemode !== 'analysis' && this.game.result) {
+                return;
+            }
 
             if (newI === i && newJ === j) {
                 return;
@@ -519,50 +676,110 @@ const app = Vue.createApp({
             }
 
             piece.neverMoved = false;
-            takenPiece && this.game.takenPieces.push(takenPiece);
+            saveMovement && this.game.takenPieces.push([...(this.game.takenPieces[this.game.takenPieces.length - 1] ?? []), takenPiece].filter(p => p !== null));
 
-            const audio = new Audio(capture ? 'assets/capture.ogg' : 'assets/move.ogg');
-            audio.play();
+            if (playSound) {
+                const audio = new Audio(capture ? 'assets/capture.ogg' : 'assets/move.ogg');
+                audio.play();
+            }
 
-            const duplicate = Chess.findDuplicateMovement(piece, i, j, newI, newJ, boardCopy, this.game.lastMoved);
-            let mov = `${piece.char !== 'P' ? piece.char : ''}`;
+            if (saveMovement) {
+                const fen = Chess.boardToFEN(this.game.board, piece, this.game.currPlayer === 'white' ? 'black' : 'white', newI, newJ, KingW, KingB, this.game.noCaptureOrPawnsQ, this.game.movements);
 
-            if (duplicate) {
-                if (!duplicate.sameFile) {
-                    mov += ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j];
-                } else if (!duplicate.sameRank) {
-                    mov += 8 - i;
+                this.game.fen.push(fen);
+            }
+
+            if (Chess.isCheckMate('white', KingW_i, KingW_j, this.game.board, this.game.lastMoved)) {
+                this.game.gamemode !== 'analysis' && this.result('Pretas venceram', 'Cheque Mate');
+
+                this.won = 'black';
+                this.draw = false;
+
+                this.game.result = '0-1';
+
+                checkMate = true;
+            } else if (Chess.isCheckMate('black', KingB_i, KingB_j, this.game.board, this.game.lastMoved)) {
+                this.game.gamemode !== 'analysis' && this.result('Brancas venceram', 'Cheque Mate');
+
+                this.game.won = 'white';
+                this.game.draw = false;
+
+                this.game.result = '1-0';
+
+                checkMate = true;
+            } else if (Chess.isStaleMate('black', KingB_i, KingB_j, this.game.board, this.game.lastMoved) || Chess.isStaleMate('white', KingW_i, KingW_j, this.game.board, this.game.lastMoved)) {
+                this.game.gamemode !== 'analysis' && this.result('Empate', 'afogamento');
+
+                this.game.won = null;
+                this.game.draw = true;
+
+                this.game.result = '½–½';
+            } else if (Chess.insufficientMaterial(this.game.board)) { // Insufficient Material (K-K, KN-K, KB-K, KB-KB)
+                this.game.gamemode !== 'analysis' && this.result('Empate', 'insuficiência material');
+
+                this.game.won = null;
+                this.game.draw = true;
+
+                this.game.result = '½–½';
+            } else if (this.game.noCaptureOrPawnsQ === 150) { // 75 Movement rule
+                this.game.gamemode !== 'analysis' && this.result('Empate', '75 movimentos');
+
+                this.game.won = null;
+                this.game.draw = true;
+
+                this.game.result = '½–½';
+            } else if (Chess.fivefoldRepetition(this.game.fen)) { // 5 Repetition rule
+                this.game.gamemode !== 'analysis' && this.result('Empate', 'repetição quintupla');
+
+                this.game.won = null;
+                this.game.draw = true;
+
+                this.game.result = '½–½';
+            }
+
+            if (saveMovement) {
+                const duplicate = Chess.findDuplicateMovement(piece, i, j, newI, newJ, boardCopy, this.game.lastMoved);
+                let mov = `${piece.char !== 'P' ? piece.char : ''}`;
+
+                if (duplicate) {
+                    if (!duplicate.sameFile) {
+                        mov += ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j];
+                    } else if (!duplicate.sameRank) {
+                        mov += 8 - i;
+                    } else {
+                        mov += `${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j]}${8 - i}`;
+                    }
+                }
+
+                if (capture) {
+                    if (piece.char === 'P') {
+                        mov += ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j];
+                    }
+
+                    mov += 'x';
+                }
+
+                mov += `${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][newJ]}${8 - newI}`;
+
+                if (enPassant) {
+                    mov += ' e.p.';
+                }
+
+                if (promotion) {
+                    mov += this.game.promoteTo;
+                }
+
+                if (checkMate) {
+                    this.game.movements.push(mov + '#');
+                } else if (check) {
+                    this.game.movements.push(mov + '+');
+                } else if (castling) {
+                    this.game.movements.push(['0-0', '0-0-0'][castling - 1]);
                 } else {
-                    mov += `${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j]}${8 - i}`;
-                }
-            }
-
-            if (capture) {
-                if (piece.char === 'P') {
-                    mov += ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j];
+                    this.game.movements.push(mov);
                 }
 
-                mov += 'x';
-            }
-
-            mov += `${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][newJ]}${8 - newI}`;
-
-            if (enPassant) {
-                mov += ' e.p.';
-            }
-
-            if (promotion) {
-                mov += this.game.promoteTo;
-            }
-
-            if (checkMate) {
-                this.game.movements.push(mov + '#');
-            } else if (check) {
-                this.game.movements.push(mov + '+');
-            } else if (castling) {
-                this.game.movements.push(['0-0', '0-0-0'][castling - 1]);
-            } else {
-                this.game.movements.push(mov);
+                this.game.currMove++;
             }
 
             if (!capture && piece.char !== 'P') {
@@ -575,147 +792,6 @@ const app = Vue.createApp({
 
             if (this.game.gamemode === 'smp') {
                 this.game.playerColor = this.game.currPlayer;
-            }
-
-            let fen = '';
-            for (let x = 0; x < 8; x++) {
-                let empty = 0;
-                for (let y = 0; y < 8; y++) {
-                    const p = this.game.board[x][y];
-                    if (!p) {
-                        empty++;
-                        continue;
-                    }
-
-                    if (empty) {
-                        fen += empty;
-                        empty = 0;
-                    }
-
-                    fen += p.color === 'black' ? p.char.toLowerCase() : p.char;
-                }
-
-                if (empty) {
-                    fen += empty;
-                    empty = 0;
-                }
-
-                x < 7 && (fen += '/');
-            }
-
-            fen += ` ${this.game.currPlayer[0]}`;
-
-            let fenCastling = ' ';
-            if (KingW.neverMoved) {
-                if (this.game.board[7][0]?.neverMoved) {
-                    fenCastling += 'Q';
-                }
-
-                if (this.game.board[7][7]?.neverMoved) {
-                    fenCastling += 'K';
-                }
-            }
-
-            if (KingB.neverMoved) {
-                if (this.game.board[0][0]?.neverMoved) {
-                    fenCastling += 'q';
-                }
-
-                if (this.game.board[0][7]?.neverMoved) {
-                    fenCastling += 'k';
-                }
-            }
-
-            if (fenCastling === ' ') {
-                fenCastling = ' -';
-            }
-
-            fen += fenCastling;
-
-            // This is not FEN because we are only recording true En Passant (this is for threefold repetition)
-            if (piece.char === 'P' && piece.longMove && (piece.color === 'white' ? newI === 4 : newI === 3) && (this.game.board[newI][newJ - 1]?.char === 'P' && this.game.board[newI][newJ + 1]?.color !== piece.color || this.game.board[newI][newJ + 1]?.char === 'P' && this.game.board[newI][newJ + 1]?.color !== piece.color)) {
-                fen += ` ${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][newJ]}${8 - newI + (piece.color === 'white' ? -1 : 1)}`;
-            } else {
-                fen += ' -';
-            }
-
-            fen += ` ${this.game.noCaptureOrPawnsQ}`;
-            fen += ` ${Math.floor(this.game.movements.length / 2 + 1)}`;
-
-            this.game.fen.push(fen);
-
-            if (Chess.isCheckMate('white', KingW_i, KingW_j, this.game.board, this.game.lastMoved)) {
-                setTimeout(() => {
-                    alert('Pretas venceram');
-                    this.reset();
-                }, 500);
-
-                this.won = 'black';
-                this.draw = false;
-
-                if (this.game.won) {
-                    this.game.result = '0-1';
-                } else {
-                    this.game.result = '1-0';
-                }
-
-                checkMate = true;
-            } else if (Chess.isCheckMate('black', KingB_i, KingB_j, this.game.board, this.game.lastMoved)) {
-                setTimeout(() => {
-                    alert('Brancas venceram');
-                    this.reset();
-                }, 500);
-
-                this.game.won = 'white';
-                this.game.draw = false;
-
-                if (this.game.won) {
-                    this.game.result = '1-0';
-                } else {
-                    this.game.result = '0-1';
-                }
-
-                checkMate = true;
-            } else if (Chess.isStaleMate('black', KingB_i, KingB_j, this.game.board, this.game.lastMoved) || Chess.isStaleMate('white', KingW_i, KingW_j, this.game.board, this.game.lastMoved)) {
-                setTimeout(() => {
-                    alert('Empate (afogamento)');
-                    this.reset();
-                }, 500);
-
-                this.game.won = null;
-                this.game.draw = true;
-
-                this.game.result = '½–½';
-            } else if (Chess.insufficientMaterial(this.game.board)) { // Insufficient Material (K-K, KN-K, KB-K, KB-KB)
-                setTimeout(() => {
-                    alert('Empate (insuficiência material)');
-                    this.reset();
-                }, 500);
-
-                this.game.won = null;
-                this.game.draw = true;
-
-                this.game.result = '½–½';
-            } else if (this.game.noCaptureOrPawnsQ === 100) { // 50 Movement rule
-                setTimeout(() => {
-                    alert('Empate (50 movimentos)');
-                    this.reset();
-                }, 500);
-
-                this.game.won = null;
-                this.game.draw = true;
-
-                this.game.result = '½–½';
-            } else if (Chess.threefoldRepetition(this.game.fen)) { // 3 Repetition rule
-                setTimeout(() => {
-                    alert('Empate (repetição tripla)');
-                    this.reset();
-                }, 500);
-
-                this.game.won = null;
-                this.game.draw = true;
-
-                this.game.result = '½–½';
             }
 
             this.game.lastMoved = piece;
@@ -737,10 +813,7 @@ const app = Vue.createApp({
                     this.game.player1TimerFn = setInterval(() => {
                         this.game.player1Timer++;
                         if (this.game.player1Timer >= this.game.timePlayer * 60) {
-                            setTimeout(() => {
-                                alert('Pretas venceram (tempo esgotado)');
-                                this.reset();
-                            }, 500);
+                            this.result('Pretas venceram', 'tempo esgotado');
 
                             this.game.won = 'black';
                             this.game.result = '0–1';
@@ -752,10 +825,7 @@ const app = Vue.createApp({
                     this.game.player2TimerFn = setInterval(() => {
                         this.game.player2Timer++;
                         if (this.game.player2Timer >= this.game.timePlayer * 60) {
-                            setTimeout(() => {
-                                alert('Brancas venceram (tempo esgotado)');
-                                this.reset();
-                            }, 500);
+                            this.result('Brancas venceram', 'tempo esgotado');
 
                             this.game.won = 'white';
                             this.game.result = '1–0';
@@ -766,9 +836,97 @@ const app = Vue.createApp({
                 }
             }
 
+            if (scrollToMovement) {
+                setTimeout(() => {
+                    document.querySelector('.sidebar-right .history .movement.current')?.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+                }, 100);
+            }
+        },
+
+        /**
+         *
+         * @param {string} result
+         * @param {string} reason
+         */
+        result(result, reason) {
             setTimeout(() => {
-                document.querySelector('.sidebar-right .history .movement:last-child')?.scrollIntoView({behavior: 'smooth', block: 'end'});
-            }, 100);
+                alert(`${result} (${reason})`);
+                this.reset();
+            }, 500);
+        },
+
+        requestUndo() {
+            if (!confirm('Soliciar voltar jogada?')) {
+                return;
+            }
+
+            if (this.connection.socket) {
+                this.connection.socket.send(JSON.stringify({
+                    command: 'requestUndo',
+                }));
+            }
+
+            if (this.game.gamemode === 'smp') {
+                this.boardAt(this.game.currMove - 1, true);
+                this.game.movements.pop();
+                this.game.fen.pop();
+                this.game.takenPieces.pop();
+            }
+        },
+
+        forfeit() {
+            if (!confirm('Desistir?')) {
+                return;
+            }
+
+            if (this.connection.socket) {
+                this.connection.socket.send(JSON.stringify({
+                    command: 'forfeit',
+                }));
+            }
+
+            if (this.game.gamemode === 'smp') {
+                if (this.game.currPlayer === 'white') {
+                    this.result('Pretas venceram', 'desistência');
+
+                    this.game.result = '0-1';
+
+                    this.game.won = 'black';
+                    this.game.draw = false;
+                } else {
+                    this.result('Brancas venceram', 'desistência');
+
+                    this.game.result = '1-0';
+
+                    this.game.won = 'white';
+                    this.game.draw = false;
+                }
+            }
+        },
+
+        requestDraw() {
+            if (!this.game.canRequestDraw) {
+                return;
+            }
+
+            if (!confirm('Solicitar empate?')) {
+                return;
+            }
+
+            if (this.connection.socket) {
+                this.connection.socket.send(JSON.stringify({
+                    command: 'requestDraw',
+                }));
+            }
+
+            if (this.game.gamemode === 'smp') {
+                this.result('Empate', 'solicitado');
+
+                this.game.result = '½-½';
+
+                this.game.won = null;
+                this.game.draw = true;
+            }
         },
 
         isPieceMove(i, j, newI, newJ) {
@@ -792,8 +950,8 @@ const app = Vue.createApp({
 
             this.mouse.i = i;
             this.mouse.j = j;
-            this.mouse.x1 = Math.floor(cell?.left - table?.left + (cell?.width ?? 0) / 2);
-            this.mouse.y1 = Math.floor(cell?.top - table?.top + (cell?.height ?? 0) / 2);
+            this.mouse.x1 = Math.floor(Math.floor(cell?.left) - Math.floor(table?.left) + (Math.floor(cell?.width) ?? 0) / 2);
+            this.mouse.y1 = Math.floor(Math.floor(cell?.top) - Math.floor(table?.top) + (Math.floor(cell?.height) ?? 0) / 2);
             this.mouse.x2 = this.mouse.x1;
             this.mouse.y2 = this.mouse.y1;
 
@@ -818,8 +976,8 @@ const app = Vue.createApp({
                 return;
             }
 
-            this.mouse.x2 = Math.floor(cell?.left - table?.left + (cell?.width ?? 0) / 2);
-            this.mouse.y2 = Math.floor(cell?.top - table?.top + (cell?.height ?? 0) / 2);
+            this.mouse.x2 = Math.floor(Math.floor(cell?.left) - Math.floor(table?.left) + (Math.floor(cell?.width) ?? 0) / 2);
+            this.mouse.y2 = Math.floor(Math.floor(cell?.top) - Math.floor(table?.top) + (Math.floor(cell?.height) ?? 0) / 2);
 
             this.annotationPreview = {x1: this.mouse.x1, y1: this.mouse.y1, x2: this.mouse.x2, y2: this.mouse.y2, shift: this.shift};
         },
@@ -837,8 +995,8 @@ const app = Vue.createApp({
             const table = document.querySelector('table.chessboard')?.getBoundingClientRect();
 
             if (this.isPieceMove(this.mouse.i, this.mouse.j, i, j)) {
-                this.mouse.x2 = Math.floor(cell?.left - table?.left + (cell?.width ?? 0) / 2);
-                this.mouse.y2 = Math.floor(cell?.top - table?.top + (cell?.height ?? 0) / 2);
+                this.mouse.x2 = Math.floor(Math.floor(cell?.left) - Math.floor(table?.left) + (Math.floor(cell?.width) ?? 0) / 2);
+                this.mouse.y2 = Math.floor(Math.floor(cell?.top) - Math.floor(table?.top) + (Math.floor(cell?.height) ?? 0) / 2);
             }
 
             let annotation;

@@ -2,6 +2,11 @@ function randomBetween(min, max) {
     return Math.floor(Math.random() * (max - min) + min);
 }
 
+/**
+ *
+ * @param {number} index
+ * @param {string} replacement
+ */
 String.prototype.replaceAt = function (index, replacement) {
     return `${this.substring(0, index)}${replacement}${this.substring(index + 1)}`;
 };
@@ -317,28 +322,131 @@ export function insufficientMaterial(board) {
 
 /**
  *
- * @param {string[]} fen
+ * @param {string} fen
  */
 export function threefoldRepetition(fen) {
     if (fen.length >= 6) {
-        for (let i = 0; i < fen.length; i++) {
-            const currMov = fen[i];
-            let dup = 1;
-            for (let j = i + 1; j < fen.length; j++) {
-                const comparMov = fen[j];
+        const currMov = fen[fen.length - 1];
+        let dup = 1;
+        for (let j = 0; j < fen.length - 1; j++) {
+            const comparMov = fen[j];
 
-                if (currMov.replace(/\d+ \d+$/, '') === comparMov.replace(/\d+ \d+$/, '')) {
-                    dup++;
-                }
+            if (currMov.replace(/\d+ \d+$/, '') === comparMov.replace(/\d+ \d+$/, '')) {
+                dup++;
             }
+        }
 
-            if (dup === 3) {
-                return true;
-            }
+        if (dup >= 3) {
+            return true;
         }
     }
 
     return false;
+}
+
+/**
+ *
+ * @param {string} fen
+ */
+export function fivefoldRepetition(fen) {
+    if (fen.length >= 10) {
+        const currMov = fen[fen.length - 1];
+        let dup = 1;
+        for (let j = 0; j < fen.length - 1; j++) {
+            const comparMov = fen[j];
+
+            if (currMov.replace(/\d+ \d+$/, '') === comparMov.replace(/\d+ \d+$/, '')) {
+                dup++;
+            }
+        }
+
+        if (dup === 5) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ *
+ * @param {(Piece | null)[][]} board
+ * @param {Piece} piece
+ * @param {string} currPlayer
+ * @param {number} newI
+ * @param {number} newJ
+ * @param {Piece} KingW
+ * @param {Piece} KingB
+ * @param {number} noCaptureOrPawnsQ
+ * @param {string[]} movements
+ */
+export function boardToFEN(board, piece, currPlayer, newI, newJ, KingW, KingB, noCaptureOrPawnsQ, movements) {
+    let fen = '';
+    for (let x = 0; x < 8; x++) {
+        let empty = 0;
+        for (let y = 0; y < 8; y++) {
+            const p = board[x][y];
+            if (!p) {
+                empty++;
+                continue;
+            }
+
+            if (empty) {
+                fen += empty;
+                empty = 0;
+            }
+
+            fen += p.color === 'black' ? p.char.toLowerCase() : p.char;
+        }
+
+        if (empty) {
+            fen += empty;
+            empty = 0;
+        }
+
+        x < 7 && (fen += '/');
+    }
+
+    fen += ` ${currPlayer[0]}`;
+
+    let fenCastling = ' ';
+    if (KingW.neverMoved) {
+        if (board[7][7]?.neverMoved) {
+            fenCastling += 'K';
+        }
+
+        if (board[7][0]?.neverMoved) {
+            fenCastling += 'Q';
+        }
+    }
+
+    if (KingB.neverMoved) {
+        if (board[0][7]?.neverMoved) {
+            fenCastling += 'k';
+        }
+
+        if (board[0][0]?.neverMoved) {
+            fenCastling += 'q';
+        }
+    }
+
+    if (fenCastling === ' ') {
+        fenCastling = ' -';
+    }
+
+    fen += fenCastling;
+
+    // This is not FEN because we are only recording true En Passant (this is for threefold repetition)
+    if (piece.char === 'P' && piece.longMove && (piece.color === 'white' ? newI === 4 : newI === 3) && (board[newI][newJ - 1]?.char === 'P' && board[newI][newJ + 1]?.color !== piece.color || board[newI][newJ + 1]?.char === 'P' && board[newI][newJ + 1]?.color !== piece.color)) {
+        fen += ` ${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][newJ]}${8 - newI + (piece.color === 'white' ? -1 : 1)}`;
+    } else {
+        fen += ' -';
+    }
+
+    fen += ` ${noCaptureOrPawnsQ}`;
+    fen += ` ${Math.floor(movements.length / 2 + 1)}`;
+
+    return fen;
 }
 
 /**
@@ -360,9 +468,21 @@ function makePiece(char, color, image, allowedMove) {
 }
 
 /**
+ *
+ * @param {string} fen
+ * @return {boolean}
+ */
+export function validateFEN(fen) {
+    return !!fen.match(/((([prnbqkPRNBQK1-8]+\/){7})([prnbqkPRNBQK12345678]*)) ([wb]) ((K?Q?k?q?)|\-) (([abcdefgh][36])|\-) (\d+) (\d+)/);
+}
+
+/**
+ * @param {string} [fen='rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1']
  * @return {(Piece | null)[][]}
  */
-export function generateArray() {
+export function generateArray(fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1') {
+    const board = fen.replace(/ .*/, '').split('/');
+
     const RookW = makePiece('R', 'white', 'RookW', (i, j, newI, newJ, board) => {
         return (i === newI || j === newJ)
             && checkHVCollisions(i, j, newI, newJ, board);
@@ -427,18 +547,135 @@ export function generateArray() {
                     || (newJ === j + 1 && board[i][j + 1] && board[i][j + 1].char === 'P' && board[i][j + 1].longMove && board[i][j + 1] == lastMoved && board[i][j + 1].color !== this.color))));
     });
 
-    const arr = [
-        [{...RookB}, {...KnightB}, {...BishopB, posColor: 'white'}, {...QueenB}, {...KingB}, {...BishopB, posColor: 'black'}, {...KnightB}, {...RookB}],
-        [{...PawnB}, {...PawnB}, {...PawnB}, {...PawnB}, {...PawnB}, {...PawnB}, {...PawnB}, {...PawnB}],
-        [null, null, null, null, null, null, null, null],
-        [null, null, null, null, null, null, null, null],
-        [null, null, null, null, null, null, null, null],
-        [null, null, null, null, null, null, null, null],
-        [{...PawnW}, {...PawnW}, {...PawnW}, {...PawnW}, {...PawnW}, {...PawnW}, {...PawnW}, {...PawnW}],
-        [{...RookW}, {...KnightW}, {...BishopW, posColor: 'black'}, {...QueenW}, {...KingW}, {...BishopW, posColor: 'white'}, {...KnightW}, {...RookW}],
-    ];
+    const castling = / [wb] (?<Castling>K?Q?k?q?)/.exec(fen)?.groups.Castling;
+
+    const enPassant = / [wb] K?Q?k?q? (?<EnPassant>(?:-|[a-z]\d))/.exec(fen)?.groups.EnPassant;
+
+    const arr = board.map((row, i) => {
+        if (/\d+/g.test(row)) {
+            const matches = row.match(/(\d+)/g);
+            matches?.forEach(match => {
+                const n = Number.parseInt(match);
+
+                row = row.replaceAt(row.indexOf(match), ' '.repeat(n));
+            });
+        }
+
+        return Array.from(row).map((char, j) => {
+            if (char === ' ') {
+                return null;
+            }
+
+            let longMove = false;
+            let neverMoved = true;
+
+            if (castling && (!castling.includes('K') && j === 7
+                || !castling.includes('Q') && j == 0)) {
+                neverMoved = false;
+            }
+
+            if (enPassant && enPassant !== '-') {
+                longMove = true;
+                neverMoved = false;
+            }
+
+            return {
+                r: {...RookB, neverMoved},
+                n: {...KnightB},
+                b: {...BishopB},
+                q: {...QueenB},
+                k: {...KingB},
+                p: {...PawnB, neverMoved, longMove},
+                R: {...RookW, neverMoved},
+                N: {...KnightW},
+                B: {...BishopW},
+                Q: {...QueenW},
+                K: {...KingW},
+                P: {...PawnW, neverMoved, longMove},
+            }[char];
+        });
+    });
 
     return arr;
+}
+
+/**
+ *
+ * @param {string} pgn
+ * @param {(Piece | null)[][]} board
+ * @param {string} currPlayer
+ * @param {Piece | null} currPlayer
+ * @return {{i: number, j: number, newI: number, newJ: number, promoteTo: string | null}}
+ */
+export function pgnToCoord(pgn, board, currPlayer, lastMoved) {
+    pgn = pgn.replace(/[+#]$/, '');
+    pgn = pgn.replace(/ e.p.$/, '');
+
+    let promoteTo = null;
+    let i;
+    let j;
+    let newI;
+    let newJ;
+    if (pgn === '0-0') {
+        i = currPlayer === 'white' ? 7 : 0;
+        j = 4;
+        newI = i;
+        newJ = j + 2;
+    } else if (pgn === '0-0-0') {
+        i = currPlayer === 'white' ? 7 : 0;
+        j = 4;
+        newI = i;
+        newJ = j - 2;
+    } else {
+        let char = pgn[0].toUpperCase() === pgn[0] ? pgn[0] : 'P';
+        pgn = pgn.replace(/^[A-Z]/, '');
+
+        if (['R', 'N', 'B', 'Q'].includes(pgn[pgn.length - 1])) {
+            promoteTo = pgn[pgn.length - 1];
+            pgn = pgn.replace(/[A-Z]$/, '');
+        }
+
+        newI = 8 - parseInt(pgn[pgn.length - 1]);
+        newJ = 'abcdefgh'.indexOf(pgn[pgn.length - 2]);
+
+        pgn = pgn.replace(/[a-z]\d$/, '');
+        pgn = pgn.replace(/x/, '');
+
+        if (/^[a-z]/.test(pgn)) {
+            j = 'abcdefgh'.indexOf(pgn[0]);
+        }
+
+        if (/\d$/.test(pgn)) {
+            i = 8 - parseInt(pgn[pgn.length - 1]);
+        }
+
+        for (let x = i ?? 0; x < board.length; x++) {
+            const row = board[x];
+
+            if (i && x !== i) {
+                continue;
+            }
+
+            for (let y = j ?? 0; y < row.length; y++) {
+                const piece = row[y];
+                if (!piece) {
+                    continue;
+                }
+
+                if (j && y !== j) {
+                    continue;
+                }
+
+                if (piece.char === char && piece.color === currPlayer && isValidMove(piece, x, y, newI, newJ, board, lastMoved)) {
+                    i = x;
+                    j = y;
+                    break;
+                }
+            }
+        }
+    }
+
+    return {i, j, newI, newJ, promoteTo};
 }
 
 /**
