@@ -798,17 +798,19 @@ const app = Vue.createApp({
 
             this.game.currentMove = [[i, j], [newI, newJ]];
 
-            this.game.player1TimerFn && clearInterval(this.game.player1TimerFn);
-            this.game.player2TimerFn && clearInterval(this.game.player2TimerFn);
-            this.game.player1TimerFn = null;
-            this.game.player2TimerFn = null;
+            if (saveMovement) {
+                this.game.player1TimerFn && clearInterval(this.game.player1TimerFn);
+                this.game.player2TimerFn && clearInterval(this.game.player2TimerFn);
+                this.game.player1TimerFn = null;
+                this.game.player2TimerFn = null;
+            }
 
             if (this.game.result) {
                 localStorage.removeItem('playerSecret');
                 this.connection.secret = null;
             }
 
-            if (this.game.movements.length >= 2 && !this.game.result) {
+            if (saveMovement && this.game.movements.length >= 2 && !this.game.result) {
                 if (this.game.currPlayer === 'white') {
                     this.game.player1TimerFn = setInterval(() => {
                         this.game.player1Timer++;
