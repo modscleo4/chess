@@ -890,6 +890,8 @@ const app = Vue.createApp({
                 return;
             }
 
+            const duplicate = Chess.findDuplicateMovement(piece, i, j, newI, newJ, this.game.board, this.game.lastMoved);
+
             const move = Chess.move(i, j, newI, newJ, this.game.board, this.game.currPlayer, this.game.lastMoved, this.game.promoteTo, checkValid);
             if (!move) {
                 return;
@@ -933,7 +935,6 @@ const app = Vue.createApp({
             }
 
             if (saveMovement) {
-                const duplicate = Chess.findDuplicateMovement(piece, i, j, newI, newJ, this.game.board, this.game.lastMoved);
                 let mov = `${piece.char !== 'P' ? piece.char : ''}`;
 
                 if (duplicate) {
