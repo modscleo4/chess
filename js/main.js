@@ -299,7 +299,7 @@ const app = Vue.createApp({
 
         scrollToResult() {
             setTimeout(() => {
-                document.querySelector('.sidebar-right .history .movement.current')?.scrollIntoView({behavior: 'smooth', block: 'end'});
+                document.querySelector('.sidebar-right .history .movement.current')?.scrollIntoView({behavior: 'smooth', block: 'nearest'});
             }, 100);
         },
 
@@ -883,6 +883,7 @@ const app = Vue.createApp({
         commitMovement(i, j, newI, newJ, {checkValid = true, saveMovement = true, playSound = true, scrollToMovement = true} = {}) {
             const piece = this.game.board[i][j];
             if (!piece) {
+                debugger;
                 return;
             }
 

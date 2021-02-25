@@ -1,0 +1,8 @@
+webrick:
+  headers:
+    Cross-Origin-Opener-Policy: same-origin
+    Cross-Origin-Embedder-Policy: require-corp
+
+include: [
+  node_modules
+]
