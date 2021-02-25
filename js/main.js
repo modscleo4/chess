@@ -186,40 +186,15 @@ const app = Vue.createApp({
 
         simd().then(simdSupported => {
             if (simdSupported) {
-                importScript('node_modules/stockfish-nnue.wasm/stockfish.js');
+                const js = importScript('node_modules/stockfish-nnue.wasm/stockfish.js');
                 this.engineVer = '13';
                 this.engineTag = 'NNUE';
+
+                js.addEventListener('load', () => this.setupStockfish());
             } else {
-                /* No SIMD support */
+                this.setupStockfish();
             }
         });
-
-        Stockfish().then(sf => {
-            stockfish = sf;
-
-            this.sendUCI('uci');
-
-            stockfish.addMessageListener(e => {
-                console.log(e);
-                if (/bestmove \(none\)/g.test(e)) {
-                    this.scores[this.game.currMove] = undefined;
-                    return;
-                }
-
-                const mult = this.game.currPlayer === 'white' ? 1 : -1;
-                const move = /(?<Begin>bestmove) (?<J>[a-z])(?<I>\d)(?<NewJ>[a-z])(?<NewI>\d)/g.exec(e)?.groups ?? /(?<Begin>info) depth (?<Depth>\d+) seldepth \d+ multipv \d+ score (?<Score>mate|cp) (?<ScoreEval>-?\d+) nodes \d+ nps \d+(?: hashfull \d+)?(?: tbhits \d+)? time \d+ pv (?<J>[a-z])(?<I>\d)(?<NewJ>[a-z])(?<NewI>\d)/g.exec(e)?.groups;
-
-                if (['sp'].includes(this.game.gamemode)) {
-                    move?.Begin === 'bestmove' && this.commitMovement(8 - parseInt(move.I), 'abcdefgh'.indexOf(move.J), 8 - parseInt(move.NewI), 'abcdefgh'.indexOf(move.NewJ));
-                    return;
-                }
-
-                move?.Depth && (this.currDepth = parseInt(move.Depth));
-                move?.Score && (this.scores[this.game.currMove] = {d: this.currDepth, bestMove: null});
-                move?.Score && move?.ScoreEval && (this.scores[this.game.currMove] = {...this.scores[this.game.currMove], score: move.Score === 'mate' ? `#${mult * parseInt(move?.ScoreEval)}` : mult * parseFloat(move.ScoreEval) / 100});
-                move && this.drawBestMove(8 - parseInt(move.I), 'abcdefgh'.indexOf(move.J), 8 - parseInt(move.NewI), 'abcdefgh'.indexOf(move.NewJ), this.game.playerColor);
-            });
-        }).catch(e => this.analysisEnabled = false);
     },
 
     computed: {
@@ -291,6 +266,35 @@ const app = Vue.createApp({
             this.openWorker();
             const message = [-Infinity, Infinity, this.config.depth, this.game.fen[this.game.currMove + 1], this.game.currPlayer, null, null];
             worker?.postMessage(message);
+        },
+
+        setupStockfish() {
+            Stockfish().then(sf => {
+                stockfish = sf;
+
+                this.sendUCI('uci');
+
+                stockfish.addMessageListener(e => {
+                    console.log(e);
+                    if (/bestmove \(none\)/g.test(e)) {
+                        this.scores[this.game.currMove] = undefined;
+                        return;
+                    }
+
+                    const mult = this.game.currPlayer === 'white' ? 1 : -1;
+                    const move = /(?<Begin>bestmove) (?<J>[a-z])(?<I>\d)(?<NewJ>[a-z])(?<NewI>\d)/g.exec(e)?.groups ?? /(?<Begin>info) depth (?<Depth>\d+) seldepth \d+ multipv \d+ score (?<Score>mate|cp) (?<ScoreEval>-?\d+) nodes \d+ nps \d+(?: hashfull \d+)?(?: tbhits \d+)? time \d+ pv (?<J>[a-z])(?<I>\d)(?<NewJ>[a-z])(?<NewI>\d)/g.exec(e)?.groups;
+
+                    if (['sp'].includes(this.game.gamemode)) {
+                        move?.Begin === 'bestmove' && this.commitMovement(8 - parseInt(move.I), 'abcdefgh'.indexOf(move.J), 8 - parseInt(move.NewI), 'abcdefgh'.indexOf(move.NewJ));
+                        return;
+                    }
+
+                    move?.Depth && (this.currDepth = parseInt(move.Depth));
+                    move?.Score && (this.scores[this.game.currMove] = {d: this.currDepth, bestMove: null});
+                    move?.Score && move?.ScoreEval && (this.scores[this.game.currMove] = {...this.scores[this.game.currMove], score: move.Score === 'mate' ? `#${mult * parseInt(move?.ScoreEval)}` : mult * parseFloat(move.ScoreEval) / 100});
+                    move && this.drawBestMove(8 - parseInt(move.I), 'abcdefgh'.indexOf(move.J), 8 - parseInt(move.NewI), 'abcdefgh'.indexOf(move.NewJ), this.game.playerColor);
+                });
+            }).catch(e => this.analysisEnabled = false);
         },
 
         scrollToResult() {
