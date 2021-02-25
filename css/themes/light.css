@@ -1,7 +1,7 @@
 :root[theme="light"] {
     --background-color: rgba(239, 239, 239, 0.9);
-    --bg-gradient-start: rgb(51, 51, 51);
-    --bg-gradient-end: rgb(35, 35, 35);
+    --bg-gradient-start: rgb(197, 197, 197);
+    --bg-gradient-end: rgb(177, 177, 177);
     --card-color: rgb(253, 253, 253);
     --body-color: rgb(83, 30, 180);
 
@@ -30,18 +30,23 @@
     --cell-background-hover: rgba(255, 255, 255, 0.25);
     --cell-background-color-mousedown: rgba(255, 255, 255, 0.10);
 
-    --card-opaque-bg: rgba(255,255, 255, 0.20);
+    --card-opaque-bg: rgb(242, 242, 242, 0.44);
 
     --movement-row-id:  rgba(255,255, 255, 0.20);
     --movement-hover:  rgba(36, 186, 206, 0.2);
     --movement-current:  rgba(23, 248, 248, 0.2);
+
+    --scrollbar-thumb: rgb(59, 59, 59);
+    --scrollbar-thumb-hover: rgb(38, 38, 38);
+    --scrollbar-thumb-active: rgb(22, 22, 22);
+    --scrollbar-track: rgb(181, 181, 181);
 }
 
 @media (prefers-color-scheme: light) {
     :root[theme="system"] {
         --background-color: rgba(239, 239, 239, 0.9);
-        --bg-gradient-start: rgb(51, 51, 51);
-        --bg-gradient-end: rgb(35, 35, 35);
+        --bg-gradient-start: rgb(197, 197, 197);
+        --bg-gradient-end: rgb(177, 177, 177);
         --card-color: rgb(253, 253, 253);
         --body-color: rgb(83, 30, 180);
 
@@ -70,10 +75,15 @@
         --cell-background-color-hover: rgba(255, 255, 255, 0.25);
         --cell-background-color-mousedown: rgba(255, 255, 255, 0.10);
 
-        --card-opaque-bg: rgba(255,255, 255, 0.20);
+        --card-opaque-bg: rgb(242, 242, 242, 0.44);
 
         --movement-row-id:  rgba(255,255, 255, 0.20);
         --movement-hover:  rgba(36, 186, 206, 0.2);
         --movement-current:  rgba(23, 248, 248, 0.2);
+
+        --scrollbar-thumb: rgb(59, 59, 59);
+        --scrollbar-thumb-hover: rgb(38, 38, 38);
+        --scrollbar-thumb-active: rgb(22, 22, 22);
+        --scrollbar-track: rgb(181, 181, 181);
     }
 }

@@ -14,11 +14,22 @@ String.prototype.replaceAt = function (index, replacement) {
 /**
  *
  * @typedef {Object} Piece
- * @property {string} char
- * @property {string} color
+ * @property {PieceChar} char
+ * @property {PlayerColor} color
+ * @property {number} value
  * @property {string} image
  * @property {boolean} neverMoved
  * @property {Function} allowedMove
+ */
+
+/**
+ *
+ * @typedef {('white'|'black')} PlayerColor
+ */
+
+/**
+ *
+ * @typedef {('K'|'Q'|'R'|'B'|'N'|'P')} PieceChar
  */
 
 /**
@@ -107,13 +118,13 @@ export function checkDCollisions(i, j, newI, newJ, board) {
  * @return {boolean}
  */
 export function hasValidMovements(color, board, lastMoved) {
-    for (let i = 0; i < 8; i++) {
-        for (let j = 0; j < 8; j++) {
+    for (let i = 0; i < board.length; i++) {
+        for (let j = 0; j < board[i].length; j++) {
             const piece = board[i][j];
 
             if (piece?.color === color) {
-                for (let newI = 0; newI < 8; newI++) {
-                    for (let newJ = 0; newJ < 8; newJ++) {
+                for (let newI = 0; newI < board.length; newI++) {
+                    for (let newJ = 0; newJ < board[newI].length; newJ++) {
                         if (isValidMove(piece, i, j, newI, newJ, board, lastMoved)) {
                             return true;
                         }
@@ -135,6 +146,10 @@ export function hasValidMovements(color, board, lastMoved) {
  * @return {boolean}
  */
 export function isChecked(color, i, j, board) {
+    if (i < 0 || i >= board.length || j < 0 || j >= board[i].length) {
+        return false;
+    }
+
     // Up
     for (let x = i - 1, y = j; x >= 0; x--) {
         if (['R', 'Q'].includes(board[x][y]?.char) && board[x][y]?.color !== color) {
@@ -145,7 +160,7 @@ export function isChecked(color, i, j, board) {
     }
 
     // Down
-    for (let x = i + 1, y = j; x <= 7; x++) {
+    for (let x = i + 1, y = j; x < board.length; x++) {
         if (['R', 'Q'].includes(board[x][y]?.char) && board[x][y]?.color !== color) {
             return true;
         } else if (board[x][y]) {
@@ -163,7 +178,7 @@ export function isChecked(color, i, j, board) {
     }
 
     // Right
-    for (let x = i, y = j + 1; y <= 7; y++) {
+    for (let x = i, y = j + 1; y < board[x].length; y++) {
         if (['R', 'Q'].includes(board[x][y]?.char) && board[x][y]?.color !== color) {
             return true;
         } else if (board[x][y]) {
@@ -181,7 +196,7 @@ export function isChecked(color, i, j, board) {
     }
 
     // Left Down
-    for (let x = i - 1, y = j + 1; x >= 0 && y <= 7; x--, y++) {
+    for (let x = i - 1, y = j + 1; x >= 0 && y < board[x].length; x--, y++) {
         if (['B', 'Q'].includes(board[x][y]?.char) && board[x][y]?.color !== color) {
             return true;
         } else if (board[x][y]) {
@@ -190,7 +205,7 @@ export function isChecked(color, i, j, board) {
     }
 
     // Right Up
-    for (let x = i + 1, y = j - 1; x <= 7 && y >= 0; x++, y--) {
+    for (let x = i + 1, y = j - 1; x < board.length && y >= 0; x++, y--) {
         if (['B', 'Q'].includes(board[x][y]?.char) && board[x][y]?.color !== color) {
             return true;
         } else if (board[x][y]) {
@@ -199,7 +214,7 @@ export function isChecked(color, i, j, board) {
     }
 
     // Right Down
-    for (let x = i + 1, y = j + 1; x <= 7 && y <= 7; x++, y++) {
+    for (let x = i + 1, y = j + 1; x < board.length && y < board[x].length; x++, y++) {
         if (['B', 'Q'].includes(board[x][y]?.char) && board[x][y]?.color !== color) {
             return true;
         } else if (board[x][y]) {
@@ -209,7 +224,7 @@ export function isChecked(color, i, j, board) {
 
     // Pawn
     if (color === 'white' && i - 1 >= 0 && ((board[i - 1][j - 1]?.char === 'P' && board[i - 1][j - 1]?.color !== color) || (board[i - 1][j + 1]?.char === 'P' && board[i - 1][j + 1]?.color !== color))
-        || color === 'black' && i - 1 <= 7 && ((board[i + 1][j - 1]?.char === 'P' && board[i + 1][j - 1]?.color !== color) || (board[i + 1][j + 1]?.char === 'P' && board[i + 1][j + 1]?.color !== color))) {
+        || color === 'black' && i + 1 < board.length && ((board[i + 1][j - 1]?.char === 'P' && board[i + 1][j - 1]?.color !== color) || (board[i + 1][j + 1]?.char === 'P' && board[i + 1][j + 1]?.color !== color))) {
         return true;
     }
 
@@ -218,9 +233,9 @@ export function isChecked(color, i, j, board) {
         || board[i - 2][j + 1]?.char === 'N' && board[i - 2][j + 1]?.color !== color)
         || i - 1 >= 0 && (board[i - 1][j - 2]?.char === 'N' && board[i - 1][j - 2]?.color !== color
             || board[i - 1][j + 2]?.char === 'N' && board[i - 1][j + 2]?.color !== color)
-        || i + 1 <= 7 && (board[i + 1][j - 2]?.char === 'N' && board[i + 1][j - 2]?.color !== color
+        || i + 1 < board.length && (board[i + 1][j - 2]?.char === 'N' && board[i + 1][j - 2]?.color !== color
             || board[i + 1][j + 2]?.char === 'N' && board[i + 1][j + 2]?.color !== color)
-        || i + 2 <= 7 && (board[i + 2][j - 1]?.char === 'N' && board[i + 2][j - 1]?.color !== color
+        || i + 2 < board.length && (board[i + 2][j - 1]?.char === 'N' && board[i + 2][j - 1]?.color !== color
             || board[i + 2][j + 1]?.char === 'N' && board[i + 2][j + 1]?.color !== color)) {
         return true;
     }
@@ -230,7 +245,7 @@ export function isChecked(color, i, j, board) {
         || board[i - 1][j + 1]?.char === 'K')
         || board[i][j - 1]?.char === 'K'
         || board[i][j + 1]?.char === 'K'
-        || i + 1 <= 7 && (board[i + 1][j - 1]?.char === 'K'
+        || i + 1 < board.length && (board[i + 1][j - 1]?.char === 'K'
             || board[i + 1][j]?.char === 'K'
             || board[i + 1][j + 1]?.char === 'K')) {
         return true;
@@ -242,16 +257,16 @@ export function isChecked(color, i, j, board) {
 /**
  *
  * @param {string} color
- * @param {number} i
- * @param {number} j
  * @param {(Piece | null)[][]} board
  * @param {(Piece | null)} lastMoved
  * @return {boolean}
  */
-export function isCheckMate(color, i, j, board, lastMoved) {
+export function isCheckMate(color, board, lastMoved) {
     if (hasValidMovements(color, board, lastMoved)) {
         return false;
     }
+
+    const {i, j} = findPiece(board, (p => p?.char === 'K' && p?.color === color));
 
     return isChecked(color, i, j, board);
 }
@@ -259,16 +274,16 @@ export function isCheckMate(color, i, j, board, lastMoved) {
 /**
  *
  * @param {string} color
- * @param {number} i
- * @param {number} j
  * @param {(Piece | null)[][]} board
  * @param {(Piece | null)} lastMoved
  * @return {boolean}
  */
-export function isStaleMate(color, i, j, board, lastMoved) {
+export function isStaleMate(color, board, lastMoved) {
     if (hasValidMovements(color, board, lastMoved)) {
         return false;
     }
+
+    const {i, j} = findPiece(board, (p => p?.char === 'K' && p?.color === color));
 
     return !isChecked(color, i, j, board);
 }
@@ -371,20 +386,20 @@ export function fivefoldRepetition(fen) {
 /**
  *
  * @param {(Piece | null)[][]} board
- * @param {Piece} piece
- * @param {string} currPlayer
- * @param {number} newI
- * @param {number} newJ
- * @param {Piece} KingW
- * @param {Piece} KingB
- * @param {number} noCaptureOrPawnsQ
- * @param {string[]} movements
+ * @param {boolean} onlyBoard
+ * @param {Piece?} lastMoved
+ * @param {PlayerColor?} currPlayer
+ * @param {number?} newI
+ * @param {number?} newJ
+ * @param {boolean} [withTime=true]
+ * @param {number|null} [noCaptureOrPawnsQ=null]
+ * @param {string[]|null} [movements=null]
  */
-export function boardToFEN(board, piece, currPlayer, newI, newJ, KingW, KingB, noCaptureOrPawnsQ, movements) {
+export function boardToFEN(board, onlyBoard, lastMoved, currPlayer, newI, newJ, withTime = true, noCaptureOrPawnsQ = null, movements = null) {
     let fen = '';
-    for (let x = 0; x < 8; x++) {
+    for (let x = 0; x < board.length; x++) {
         let empty = 0;
-        for (let y = 0; y < 8; y++) {
+        for (let y = 0; y < board[x].length; y++) {
             const p = board[x][y];
             if (!p) {
                 empty++;
@@ -404,13 +419,21 @@ export function boardToFEN(board, piece, currPlayer, newI, newJ, KingW, KingB, n
             empty = 0;
         }
 
-        x < 7 && (fen += '/');
+        x < board.length - 1 && (fen += '/');
+    }
+
+    if (onlyBoard) {
+        return fen;
     }
 
     fen += ` ${currPlayer[0]}`;
 
     let fenCastling = ' ';
-    if (KingW.neverMoved) {
+
+    const {i: KingW_i, j: KingW_j, piece: KingW} = findPiece(board, (p => p?.char === 'K' && p?.color === 'white'));
+    const {i: KingB_i, j: KingB_j, piece: KingB} = findPiece(board, (p => p?.char === 'K' && p?.color === 'black'));
+
+    if (KingW?.neverMoved) {
         if (board[7][7]?.neverMoved) {
             fenCastling += 'K';
         }
@@ -420,7 +443,7 @@ export function boardToFEN(board, piece, currPlayer, newI, newJ, KingW, KingB, n
         }
     }
 
-    if (KingB.neverMoved) {
+    if (KingB?.neverMoved) {
         if (board[0][7]?.neverMoved) {
             fenCastling += 'k';
         }
@@ -437,30 +460,34 @@ export function boardToFEN(board, piece, currPlayer, newI, newJ, KingW, KingB, n
     fen += fenCastling;
 
     // This is not FEN because we are only recording true En Passant (this is for threefold repetition)
-    if (piece.char === 'P' && piece.longMove && (piece.color === 'white' ? newI === 4 : newI === 3) && (board[newI][newJ - 1]?.char === 'P' && board[newI][newJ + 1]?.color !== piece.color || board[newI][newJ + 1]?.char === 'P' && board[newI][newJ + 1]?.color !== piece.color)) {
-        fen += ` ${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][newJ]}${8 - newI + (piece.color === 'white' ? -1 : 1)}`;
+    if (lastMoved.char === 'P' && lastMoved.longMove && (lastMoved.color === 'white' ? newI === 4 : newI === 3) && (board[newI][newJ - 1]?.char === 'P' && board[newI][newJ + 1]?.color !== lastMoved.color || board[newI][newJ + 1]?.char === 'P' && board[newI][newJ + 1]?.color !== lastMoved.color)) {
+        fen += ` ${['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][newJ]}${8 - newI + (lastMoved.color === 'white' ? -1 : 1)}`;
     } else {
         fen += ' -';
     }
 
-    fen += ` ${noCaptureOrPawnsQ}`;
-    fen += ` ${Math.floor(movements.length / 2 + 1)}`;
+    if (withTime) {
+        fen += ` ${noCaptureOrPawnsQ}`;
+        fen += ` ${Math.floor(movements.length / 2 + 1)}`;
+    }
 
     return fen;
 }
 
 /**
  *
- * @param {string} char
- * @param {string} color
+ * @param {PieceChar} char
+ * @param {PlayerColor} color
+ * @param {number} value
  * @param {string} image
  * @param {Function} allowedMove
  * @return {Piece}
  */
-function makePiece(char, color, image, allowedMove) {
+function makePiece(char, color, value, image, allowedMove) {
     return {
         char,
         color,
+        value,
         image,
         neverMoved: true,
         allowedMove,
@@ -483,55 +510,55 @@ export function validateFEN(fen) {
 export function generateArray(fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1') {
     const board = fen.replace(/ .*/, '').split('/');
 
-    const RookW = makePiece('R', 'white', 'RookW', (i, j, newI, newJ, board) => {
+    const RookW = makePiece('R', 'white', 5, 'RookW', (i, j, newI, newJ, board) => {
         return (i === newI || j === newJ)
             && checkHVCollisions(i, j, newI, newJ, board);
     });
 
-    const RookB = makePiece('R', 'black', 'RookB', (i, j, newI, newJ, board) => {
+    const RookB = makePiece('R', 'black', 5, 'RookB', (i, j, newI, newJ, board) => {
         return (i === newI || j === newJ)
             && checkHVCollisions(i, j, newI, newJ, board);
     });
 
-    const KnightW = makePiece('N', 'white', 'KnightW', (i, j, newI, newJ, board) => {
+    const KnightW = makePiece('N', 'white', 3, 'KnightW', (i, j, newI, newJ, board) => {
         return (Math.abs(newI - i) === 2 && Math.abs(newJ - j) === 1 || Math.abs(newI - i) === 1 && Math.abs(newJ - j) === 2);
     });
 
-    const KnightB = makePiece('N', 'black', 'KnightB', (i, j, newI, newJ, board) => {
+    const KnightB = makePiece('N', 'black', 3, 'KnightB', (i, j, newI, newJ, board) => {
         return (Math.abs(newI - i) === 2 && Math.abs(newJ - j) === 1 || Math.abs(newI - i) === 1 && Math.abs(newJ - j) === 2);
     });
 
-    const BishopW = makePiece('B', 'white', 'BishopW', (i, j, newI, newJ, board) => {
+    const BishopW = makePiece('B', 'white', 3, 'BishopW', (i, j, newI, newJ, board) => {
         return (Math.abs(newI - i) === Math.abs(newJ - j))
             && checkDCollisions(i, j, newI, newJ, board);
     });
 
-    const BishopB = makePiece('B', 'black', 'BishopB', (i, j, newI, newJ, board) => {
+    const BishopB = makePiece('B', 'black', 3, 'BishopB', (i, j, newI, newJ, board) => {
         return (Math.abs(newI - i) === Math.abs(newJ - j))
             && checkDCollisions(i, j, newI, newJ, board);
     });
 
-    const QueenW = makePiece('Q', 'white', 'QueenW', (i, j, newI, newJ, board) => {
+    const QueenW = makePiece('Q', 'white', 9, 'QueenW', (i, j, newI, newJ, board) => {
         return ((i === newI || j === newJ) && checkHVCollisions(i, j, newI, newJ, board)
             || Math.abs(newI - i) === Math.abs(newJ - j)) && checkDCollisions(i, j, newI, newJ, board);
     });
 
-    const QueenB = makePiece('Q', 'black', 'QueenB', (i, j, newI, newJ, board) => {
+    const QueenB = makePiece('Q', 'black', 9, 'QueenB', (i, j, newI, newJ, board) => {
         return ((i === newI || j === newJ) && checkHVCollisions(i, j, newI, newJ, board)
             || Math.abs(newI - i) === Math.abs(newJ - j)) && checkDCollisions(i, j, newI, newJ, board);
     });
 
-    const KingW = makePiece('K', 'white', 'KingW', function (i, j, newI, newJ, board) {
+    const KingW = makePiece('K', 'white', 200, 'KingW', function (i, j, newI, newJ, board) {
         return (Math.abs(newI - i) <= 1 && Math.abs(newJ - j) <= 1)
             || this.neverMoved && (Math.abs(newJ - j) === 2 && newI === i && (newJ < j ? board[i][0] : board[i][7])?.neverMoved && checkHVCollisions(i, j, newI, newJ + 1, board) && !isChecked(this.color, i, j, board));
     });
 
-    const KingB = makePiece('K', 'black', 'KingB', function (i, j, newI, newJ, board) {
+    const KingB = makePiece('K', 'black', 200, 'KingB', function (i, j, newI, newJ, board) {
         return (Math.abs(newI - i) <= 1 && Math.abs(newJ - j) <= 1)
             || this.neverMoved && (Math.abs(newJ - j) === 2 && newI === i && (newJ < j ? board[i][0] : board[i][7])?.neverMoved && checkHVCollisions(i, j, newI, newJ + 1, board) && !isChecked(this.color, i, j, board));
     });
 
-    const PawnW = makePiece('P', 'white', 'PawnW', function (i, j, newI, newJ, board, lastMoved) {
+    const PawnW = makePiece('P', 'white', 1, 'PawnW', function (i, j, newI, newJ, board, lastMoved) {
         return (((i === 6 && newI === i - 2) || newI === i - 1) && newJ === j && checkHVCollisions(i, j, newI, newJ, board))
             || ((i - 1 === newI && j + 1 === newJ && board[i - 1][j + 1] && board[i - 1][j + 1].color !== this.color) || (i - 1 === newI && j - 1 === newJ && board[i - 1][j - 1] && board[i - 1][j - 1].color !== this.color))
             || (i === 3 && (newI === i - 1
@@ -539,7 +566,7 @@ export function generateArray(fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
                     || (newJ === j + 1 && board[i][j + 1] && board[i][j + 1].char === 'P' && board[i][j + 1].longMove && board[i][j + 1] == lastMoved && board[i][j + 1].color !== this.color))));
     });
 
-    const PawnB = makePiece('P', 'black', 'PawnB', function (i, j, newI, newJ, board, lastMoved) {
+    const PawnB = makePiece('P', 'black', 1, 'PawnB', function (i, j, newI, newJ, board, lastMoved) {
         return (((i === 1 && newI === i + 2) || newI === i + 1) && newJ === j && checkHVCollisions(i, j, newI, newJ, board))
             || ((i + 1 === newI && j + 1 === newJ && board[i + 1][j + 1] && board[i + 1][j + 1].color !== this.color) || (i + 1 === newI && j - 1 === newJ && board[i + 1][j - 1] && board[i + 1][j - 1].color !== this.color))
             || (i === 4 && (newI === i + 1
@@ -603,8 +630,8 @@ export function generateArray(fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
  *
  * @param {string} pgn
  * @param {(Piece | null)[][]} board
- * @param {string} currPlayer
- * @param {Piece | null} currPlayer
+ * @param {PlayerColor} currPlayer
+ * @param {Piece | null} lastMoved
  * @return {{i: number, j: number, newI: number, newJ: number, promoteTo: string | null}}
  */
 export function pgnToCoord(pgn, board, currPlayer, lastMoved) {
@@ -680,6 +707,24 @@ export function pgnToCoord(pgn, board, currPlayer, lastMoved) {
 
 /**
  *
+ * @param {(Piece | null)[][]} board
+ * @param {Function} fn
+ * @return {{i: number, j: number, piece: Piece | null}}
+ */
+export function findPiece(board, fn) {
+    for (let i = 0; i < board.length; i++) {
+        for (let j = 0; j < board[i].length; j++) {
+            if (fn(board[i][j])) {
+                return {i, j, piece: board[i][j]};
+            }
+        }
+    }
+
+    return {i: -1, j: -1, piece: null};
+}
+
+/**
+ *
  * @param {Piece} piece
  * @param {number} i
  * @param {number} j
@@ -726,8 +771,7 @@ export function isValidMove(piece, i, j, newI, newJ, board, lastMoved) {
 
     boardCopy[newI][newJ] = piece;
 
-    const King_i = boardCopy.findIndex(row => row.find(p => p?.char === 'K' && p?.color === piece.color));
-    const King_j = boardCopy[King_i].findIndex(p => p?.char === 'K' && p?.color === piece.color);
+    const {i: King_i, j: King_j} = findPiece(boardCopy, (p => p?.char === 'K' && p?.color === piece.color));
 
     if (isChecked(piece.color, King_i, King_j, boardCopy)) {
         return false;
@@ -738,18 +782,161 @@ export function isValidMove(piece, i, j, newI, newJ, board, lastMoved) {
 
 /**
  *
+ * @param {number} i
+ * @param {number} j
+ * @param {number} newI
+ * @param {number} newJ
+ * @param {(Piece | null)[][]} board
+ * @param {PlayerColor} currPlayer
+ * @param {(Piece | null)} lastMoved
+ * @param {('Q'|'R'|'B'|'N')} promoteTo
+ * @param {boolean} [checkValid=true]
+ * @return {{capture: boolean, enPassant: boolean, promotion: boolean, castling: number, check: boolean, takenPiece: (Piece | null)} | null}
+ */
+export function move(i, j, newI, newJ, board, currPlayer, lastMoved, promoteTo, checkValid = true) {
+    const piece = board[i][j];
+    if (!piece) {
+        return null;
+    }
+
+    if (newI === i && newJ === j) {
+        return null;
+    }
+
+    if (checkValid) {
+        if (!isValidMove(piece, i, j, newI, newJ, board, lastMoved)) {
+            return null;
+        }
+    }
+
+    let capture = false;
+    let enPassant = false;
+    let promotion = false;
+    let castling = 0;
+    let check = false;
+
+    let takenPiece = board[newI][newJ]; // Capture
+    if (piece.char === 'P' && !takenPiece && newJ !== j && ((piece.color === 'white' && i === 3) || (piece.color === 'black' && i === 4))) {
+        enPassant = true; // En Passant Capture
+        takenPiece = board[i][newJ];
+        board[i][newJ] = null;
+    }
+
+    capture = !!takenPiece;
+
+    board[i][j] = null;
+    board[newI][newJ] = piece;
+
+    if (piece.char === 'P' && [0, 7].includes(newI)) { // Promotion
+        promote(piece, newI, newJ, promoteTo, board);
+        promotion = true;
+    }
+
+    if (piece.char === 'K' && Math.abs(newJ - j) === 2) {
+        if (newJ > j) {
+            const rook = board[i][7];
+            board[i][j + 1] = rook;
+            board[i][7] = null;
+            castling = 1;
+        } else {
+            const rook = board[i][0];
+            board[i][j - 1] = rook;
+            board[i][0] = null;
+            castling = 2;
+        }
+    }
+
+    const {i: King_i, j: King_j} = findPiece(board, (p => p?.char === 'K' && p?.color !== piece.color));
+
+    if (isChecked(piece.color === 'white' ? 'black' : 'white', King_i, King_j, board)) {
+        check = true;
+    }
+
+    if (piece.char === 'P' && Math.abs(newI - i) === 2) {
+        piece.longMove = true; // For En Passant verification
+    }
+
+    piece.neverMoved = false;
+
+    return {
+        capture,
+        enPassant,
+        promotion,
+        castling,
+        check,
+        takenPiece,
+    };
+}
+
+/**
+ *
+ * @param {(Piece | null)[][]} board
+ * @param {PlayerColor} currPlayer
+ * @param {(Piece | null)} lastMoved
+ * @param {number} noCaptureOrPawnsQ,
+ * @param {string} fen
+ * @return {{won: (PlayerColor | null), draw: boolean, result: (string | null), reason: (string | null)}}
+ */
+export function result(board, currPlayer, lastMoved, noCaptureOrPawnsQ, fen) {
+    let won = null;
+    let draw = false;
+    let result = null;
+    let reason = null;
+
+    if (isCheckMate('white', board, lastMoved)) {
+        won = 'black';
+        draw = false;
+        result = '0-1';
+        reason = 'checkmate';
+    } else if (isCheckMate('black', board, lastMoved)) {
+        won = 'white';
+        draw = false;
+        result = '1-0';
+        reason = 'checkmate';
+    } else if (isStaleMate('black', board, lastMoved) || isStaleMate('white', board, lastMoved)) {
+        won = null;
+        draw = true;
+        result = '½–½';
+        reason = 'stalemate';
+    } else if (insufficientMaterial(board)) { // Insufficient Material (K-K, KN-K, KB-K, KB-KB)
+        won = null;
+        draw = true;
+        result = '½–½';
+        reason = 'isufficientMaterial';
+    } else if (noCaptureOrPawnsQ === 150) { // 75 Movement rule
+        won = null;
+        draw = true;
+        result = '½–½';
+        reason = 'seventyFive';
+    } else if (fivefoldRepetition(fen)) { // 5 Repetition rule
+        won = null;
+        draw = true;
+        result = '½–½';
+        reason = 'fivefold';
+    }
+
+    return {
+        won,
+        draw,
+        result,
+        reason,
+    };
+}
+
+/**
+ *
  * @param {Piece} pawn
  * @param {number} i
  * @param {number} j
- * @param {string} desiredPiece
+ * @param {('Q'|'R'|'B'|'N')} desiredPiece
  * @param {(Piece | null)[][]} board
  */
-export function promove(pawn, i, j, desiredPiece, board) {
+export function promote(pawn, i, j, desiredPiece, board) {
     if (!['Q', 'B', 'N', 'R'].includes(desiredPiece)) {
         return false;
     }
 
-    const piece = makePiece(desiredPiece, pawn.color, {Q: 'Queen', B: 'Bishop', N: 'Knight', R: 'Rook'}[desiredPiece] + pawn.color[0].toUpperCase(), {
+    const piece = makePiece(desiredPiece, pawn.color, {Q: 9, B: 3, N: 3, R: 5}[desiredPiece], {Q: 'Queen', B: 'Bishop', N: 'Knight', R: 'Rook'}[desiredPiece] + pawn.color[0].toUpperCase(), {
         Q: (i, j, newI, newJ, board) => {
             return ((i === newI || j === newJ) || Math.abs(newI - i) === Math.abs(newJ - j))
                 && checkHVCollisions(i, j, newI, newJ, board)
@@ -794,8 +981,8 @@ export function findDuplicateMovement(piece, i, j, newI, newJ, board, lastMoved)
     let sameFile = false;
     let sameRank = false;
 
-    for (let x = 0; x < 8; x++) {
-        for (let y = 0; y < 8; y++) {
+    for (let x = 0; x < board.length; x++) {
+        for (let y = 0; y < board[x].length; y++) {
             const testingPiece = board[x][y];
             if (!testingPiece || testingPiece.char === 'P') {
                 continue;
@@ -817,4 +1004,100 @@ export function findDuplicateMovement(piece, i, j, newI, newJ, board, lastMoved)
     }
 
     return null;
+}
+
+/**
+ *
+ * @param {(Piece | null)[][]} board
+ * @param {PlayerColor} currPlayer
+ * @param {Piece | null} lastMoved
+ * @param {boolean} [sort=false]
+ * @param {boolean} [onlyCaptures=false]
+ */
+export function allMoves(board, currPlayer, lastMoved, sort = false, onlyCaptures = false) {
+    const ret = [];
+
+    for (let i = 0; i < board.length; i++) {
+        for (let j = 0; j < board[i].length; j++) {
+            const piece = board[i][j];
+            if (!piece || piece.color !== currPlayer) {
+                continue;
+            }
+
+            for (let newI = 0; newI < board.length; newI++) {
+                for (let newJ = 0; newJ < board[newI].length; newJ++) {
+                    if (!isValidMove(piece, i, j, newI, newJ, board, lastMoved)) {
+                        continue;
+                    }
+
+                    if (onlyCaptures && !board[newI][newJ]) {
+                        continue;
+                    }
+
+                    ret.push({i, j, newI, newJ});
+                }
+            }
+        }
+    }
+
+    if (!sort) {
+        return ret;
+    }
+
+    const {i: KingW_i, j: KingW_j} = findPiece(board, (p => p?.char === 'K' && p?.color === 'white'));
+    const {i: KingB_i, j: KingB_j} = findPiece(board, (p => p?.char === 'K' && p?.color === 'black'));
+
+    return ret.sort((a, b) => {
+        const pieceA = board[a.i][a.j];
+        const targetA = board[a.newI][a.newJ];
+
+        const pieceB = board[b.i][b.j];
+        const targetB = board[b.newI][b.newJ];
+
+        let boardCopy = board.map(r => [...r]);
+        move(a.i, a.j, a.newI, a.newJ, boardCopy, currPlayer, lastMoved, 'Q');
+
+        let scoreA = 0;
+        if (currPlayer === 'white' && isChecked('black', KingB_i, KingB_j, boardCopy)
+            || currPlayer === 'black' && isChecked('white', KingW_i, KingW_j, boardCopy)) {
+            scoreA += 100;
+        }
+
+        if (targetA) {
+            scoreA += 10 * targetA.value - pieceA?.value;
+        }
+
+        if ([0, board.length - 1].includes(a.newI) && pieceA?.char === 'P') {
+            scoreA += 9;
+        }
+
+        if (board[a.newI + pieceA?.color === 'white' ? -1 : 1][a.newJ + 1]?.char === 'P' && board[a.newI + pieceA?.color === 'white' ? -1 : 1][a.newJ + 1]?.color !== pieceA?.color ||
+            board[a.newI + pieceA?.color === 'white' ? -1 : 1][a.newJ - 1]?.char === 'P' && board[a.newI + pieceA?.color === 'white' ? -1 : 1][a.newJ - 1]?.color !== pieceA?.color) {
+            scoreA -= pieceA?.value;
+        }
+
+        boardCopy = board.map(r => [...r]);
+        move(b.i, b.j, b.newI, b.newJ, boardCopy, currPlayer, lastMoved, 'Q');
+
+        let scoreB = 0;
+        if (currPlayer === 'white' && isChecked('black', KingB_i, KingB_j, boardCopy)
+            || currPlayer === 'black' && isChecked('white', KingW_i, KingW_j, boardCopy)) {
+            scoreA += 100;
+        }
+
+        if (targetB) {
+            scoreB += 10 * targetB.value - pieceB?.value;
+        }
+
+        if ([0, board.length - 1].includes(b.newI) && pieceB?.char === 'P') {
+            scoreB += 9;
+        }
+
+        if (board[b.newI + pieceB?.color === 'white' ? -1 : 1][b.newJ + 1]?.char === 'P' && board[b.newI + pieceB?.color === 'white' ? -1 : 1][b.newJ + 1]?.color !== pieceB?.color ||
+            board[b.newI + pieceB?.color === 'white' ? -1 : 1][b.newJ - 1]?.char === 'P' && board[b.newI + pieceB?.color === 'white' ? -1 : 1][b.newJ - 1]?.color !== pieceB?.color) {
+            scoreB -= pieceB?.value;
+        }
+
+        return scoreB - scoreA;
+    });
 }

@@ -1,0 +1,25 @@
+{
+  "name": "chess",
+  "version": "1.0.0",
+  "description": "Chess.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/modscleo4/chess.git"
+  },
+  "main": "index.js",
+  "scripts": {},
+  "keywords": [],
+  "author": {
+    "name": "Dhiego Cassiano Fogaça Barbosa",
+    "email": "modscleo4@outlook.com"
+  },
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/modscleo4/chess/issues"
+  },
+  "homepage": "modscleo4.github.io/chess",
+  "dependencies": {
+    "stockfish-nnue.wasm": "^0.0.1",
+    "stockfish.wasm": "^0.9.1"
+  }
+}

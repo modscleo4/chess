@@ -22,7 +22,7 @@
     <link rel="stylesheet" href="css/themes/light.css" />
     <link rel="stylesheet" href="css/themes/dark.css" />
 
-    <link rel="manifest" href="manifest.json" />
+    <!-- <link rel="manifest" href="manifest.json" /> -->
 
     <link rel="icon" href="favicon.png" />
 </head>
@@ -37,6 +37,9 @@
             </header>
 
             <div class="gamemodes" v-if="!game.gamemode">
+                <button type="button" class="btn btn-secondary"
+                        @click="game.gamemode = 'sp'; selectMode = false; selectVariant = true; createGame = true;">
+                    Singleplayer (vs Engine)</button>
                 <button type="button" class="btn btn-primary"
                         @click="game.gamemode = 'smp'; selectMode = false; selectVariant = true; createGame = true;">
                     Multiplayer local</button>
@@ -49,6 +52,9 @@
                 <button type="button" class="btn btn-info"
                         @click="game.gamemode = 'history';">
                     Histórico de Partidas</button>
+                <button type="button" class="btn btn-danger"
+                        @click="game.gamemode = 'settings';">
+                    Configurações</button>
             </div>
 
             <div v-if="selectMode" class="hidden mode-selector" :class="{visible: true}">
@@ -71,10 +77,16 @@
                                v-model="connection.gameid" required />
                     </div>
 
-                    <div v-if="game.gamemode === 'mp'" class="form-group">
+                    <div v-if="['mp'].includes(game.gamemode)" class="form-group">
                         <label for="inputPlayerName">Nome de jogador</label>
                         <input id="inputPlayerName" name="playerName" class="form-control" type="text"
                                v-model="playerName" maxlength="16" required />
+                    </div>
+
+                    <div v-if="game.gamemode === 'sp'" class="form-group">
+                        <label for="inputEngineElo">Elo da Engine</label>
+                        <input id="inputEngineElo" name="engineElo" class="form-control" type="number"
+                               v-model="config.engineElo" min="100" max="3200" required />
                     </div>
 
                     <div v-if="game.gamemode !== 'spec' && createGame" class="form-group">
@@ -112,7 +124,7 @@
                             <td>{{ i + 1 }}</td>
                             <td>{{ new Date(game.date).toLocaleString() }}</td>
                             <td>
-                                {{ {smp: 'Multiplayer Local', mp: 'Multiplayer Online', spec: 'Online (assistida)'}[game.gamemode] }}
+                                {{ {sp: 'Singleplayer', smp: 'Multiplayer Local', mp: 'Multiplayer Online', spec: 'Online (assistida)'}[game.gamemode] }}
                             </td>
                             <td>{{ game.result }}</td>
                             <td>
@@ -130,6 +142,41 @@
                         @click="game.gamemode = null;">Voltar</button>
             </div>
 
+            <div v-if="game.gamemode === 'settings'" class="settings">
+                <form class="form-horizontal">
+                    <fieldset>
+                        <legend>Tabuleiro</legend>
+
+                        <div class="form-group">
+                            <label for="inputColorEven">Casas claras</label>
+                            <input id="inputColorEven" name="colorEven" class="form-control form-control-sm"
+                                   type="color"
+                                   v-model="config.colorEven" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputColorOdd">Casas escuras</label>
+                            <input id="inputColorOdd" name="colorOdd" class="form-control form-control-sm" type="color"
+                                   v-model="config.colorOdd"
+                                   required />
+                        </div>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Engine</legend>
+
+                        <div class="form-group">
+                            <label for="inputDepth">Profundidade</label>
+                            <input id="inputDepth" name="depth" class="form-control form-control-sm" type="range"
+                                   min="0"
+                                   max="50" v-model="config.depth" :title="config.depth" required />
+                        </div>
+                    </fieldset>
+                </form>
+
+                <button type="button" class="btn btn-secondary"
+                        @click="game.gamemode = null;">Voltar</button>
+            </div>
+
             <footer>
                 <p>Modscleo4 © <span :style="{display: 'none'}">2021</span>
                     <span class="hidden" :class="{visible: true}">{{ new Date().getFullYear() }}</span>
@@ -137,7 +184,7 @@
             </footer>
         </div>
 
-        <template v-if="game.start" class="hidden" :class="{visible: true}">
+        <template v-if="game.start || game.gamemode === 'settings'" class="hidden" :class="{visible: true}">
             <div v-if="game.gamemode === 'mp' && !connection.canStart" class="waiting-player">
                 <p>Game ID: <a :href="`${page}/?gameid=${connection.gameid}&gamemode=mp`">{{ connection.gameid }}</a>
                 </p>
@@ -153,32 +200,38 @@
                 <p>Esperando pelos jogadores...</p>
             </div>
 
-            <div v-if="(['mp', 'spec'].includes(game.gamemode) && connection.canStart) || ['smp', 'analysis'].includes(game.gamemode)"
+            <div v-if="(['mp', 'spec'].includes(game.gamemode) && connection.canStart) || ['sp', 'smp', 'analysis', 'settings'].includes(game.gamemode)"
                  class="content">
                 <div>
 
                 </div>
 
-                <div class="chessboard-container" :class="{'inverted': game.playerColor === 'black'}">
+                <div class="chessboard-container" :class="{'inverted': game.playerColor === 'black'}"
+                     :style="{'--even': config.colorEven, '--odd': config.colorOdd}">
                     <table @mouseup.left="clearAnnotations()" class="chessboard">
                         <tbody>
                             <tr v-for="(board_row, i) in game.board" :key="i">
                                 <td :id="`cell_${i}_${j}`" v-for="(board_cell, j) in board_row" :key="j"
                                     :class="{'clickable': !game._board && !['analysis', 'spec'].includes(game.gamemode) && (board_cell?.color === game.playerColor && game.playerColor === game.currPlayer),
-                                         'moved': !!game.currentMove.find(([_i, _j]) => _i === i && _j === j),
-                                         'checked': board_cell?.checked}"
+                                            'moved': game.currentMove.some(([_i, _j]) => _i === i && _j === j),
+                                            'checked': board_cell?.checked,
+                                            'validMove': validMoves.some(([_i, _j]) => _i === i && _j === j),
+                                            'hasPiece': board_cell}"
                                     :draggable="!game._board && !['analysis', 'spec'].includes(game.gamemode) && (board_cell?.color === game.playerColor && game.playerColor === game.currPlayer)"
+                                    @click="clickPiece(i, j)"
                                     @drag="dragPiece(i, j)"
                                     @dragstart="setDragImage(i, j, $event)" @dragend="dragEnd(i, j)"
-                                    @dragover.prevent="dragOver(i, j)" @dragenter.prevent=""
-                                    @drop.prevent="drop(board_cell, i)"
-                                    @contextmenu.prevent @mousedown.right="startArrow(i, j, $event.shiftKey)"
+                                    @dragenter.prevent="dragEnter(i, j, $event)"
+                                    @dragover.prevent="dragOver(i, j, $event)"
+                                    @drop.stop.prevent="drop(i, j)"
+                                    @contextmenu.prevent
+                                    @mousedown.right="startArrow(i, j, $event.shiftKey, $event.altKey)"
                                     @mousemove="moveArrow(i, j)" @mouseup.right="endArrow(i, j)">
+                                    <img v-if="board_cell" :src="`assets/${board_cell.image}.png`" alt=""
+                                         draggable="false">
                                     <span v-if="i === 7"
                                           class="file">{{ ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j] }}</span>
                                     <span v-if="j === 7" class="rank">{{ 8 - i }}</span>
-                                    <img v-if="board_cell" :src="`assets/${board_cell.image}.png`" alt=""
-                                         draggable="false">
                                 </td>
                             </tr>
                         </tbody>
@@ -188,64 +241,109 @@
                         <defs>
                             <marker id="arrowhead-pb" orient="auto" markerWidth="4" markerHeight="8" refX="2.01"
                                     refY="2.01" cgKey="pb">
-                                <path d="M0,0 V4 L3,2 Z" fill="#003088"></path>
-                            </marker>
-                            <marker id="arrowhead-g" orient="auto" markerWidth="4" markerHeight="8" refX="2.01"
-                                    refY="2.01" cgKey="g">
-                                <path d="M0,0 V4 L3,2 Z" fill="#15781B"></path>
+                                <path d="M0,0 V4 L3,2 Z" fill="#101010"></path>
                             </marker>
                             <marker id="arrowhead-r" orient="auto" markerWidth="4" markerHeight="8" refX="2.05"
                                     refY="2.01" cgKey="r">
                                 <path d="M0,0 V4 L3,2 Z" fill="#882020"></path>
                             </marker>
+                            <marker id="arrowhead-g" orient="auto" markerWidth="4" markerHeight="8" refX="2.01"
+                                    refY="2.01" cgKey="g">
+                                <path d="M0,0 V4 L3,2 Z" fill="#15781B"></path>
+                            </marker>
+                            <marker id="arrowhead-b" orient="auto" markerWidth="4" markerHeight="8" refX="2.01"
+                                    refY="2.01" cgKey="g">
+                                <path d="M0,0 V4 L3,2 Z" fill="#003088"></path>
+                            </marker>
                         </defs>
 
-                        <circle
-                                v-for="annotation in annotations.filter(a => (a.x1 === a.x2 && a.y1 === a.y2) && !a.shift)"
-                                stroke="#157818" stroke-width="4" fill="none" :opacity="1" :cx="annotation.x1"
-                                :cy="annotation.y1" r="30"></circle>
-                        <line
-                              v-for="annotation in annotations.filter(a => (a.x1 !== a.x2 || a.y1 !== a.y2) && !a.shift)"
-                              stroke="#157818" stroke-width="12" stroke-linecap="round" marker-end="url(#arrowhead-g)"
-                              :opacity="1" :x1="annotation.x1" :y1="annotation.y1" :x2="annotation.x2"
-                              :y2="annotation.y2"></line>
-
-                        <circle v-for="annotation in annotations.filter(a => a.x1 === a.x2 && a.y1 === a.y2 && a.shift)"
+                        <circle v-for="annotation in annotations.filter(a => a.x1 === a.x2 && a.y1 === a.y2 && a.color === 'r')"
                                 stroke="#882020" stroke-width="4" fill="none" :opacity="1" :cx="annotation.x1"
-                                :cy="annotation.y1" r="30"></circle>
-                        <line v-for="annotation in annotations.filter(a => (a.x1 !== a.x2 || a.y1 !== a.y2) && a.shift)"
+                                :cy="annotation.y1" :r="radius"></circle>
+                        <line v-for="annotation in annotations.filter(a => (a.x1 !== a.x2 || a.y1 !== a.y2) && a.color === 'r')"
                               stroke="#882020" stroke-width="12" stroke-linecap="round" marker-end="url(#arrowhead-r)"
                               :opacity="1" :x1="annotation.x1" :y1="annotation.y1" :x2="annotation.x2"
                               :y2="annotation.y2"></line>
 
+                        <circle
+                                v-for="annotation in annotations.filter(a => (a.x1 === a.x2 && a.y1 === a.y2) && a.color === 'g')"
+                                stroke="#157818" stroke-width="4" fill="none" :opacity="1" :cx="annotation.x1"
+                                :cy="annotation.y1" :r="radius"></circle>
+                        <line
+                              v-for="annotation in annotations.filter(a => (a.x1 !== a.x2 || a.y1 !== a.y2) && a.color === 'g')"
+                              stroke="#157818" stroke-width="12" stroke-linecap="round" marker-end="url(#arrowhead-g)"
+                              :opacity="1" :x1="annotation.x1" :y1="annotation.y1" :x2="annotation.x2"
+                              :y2="annotation.y2"></line>
+
+                        <circle
+                                v-for="annotation in annotations.filter(a => (a.x1 === a.x2 && a.y1 === a.y2) && a.color === 'b')"
+                                stroke="#003088" stroke-width="4" fill="none" :opacity="1" :cx="annotation.x1"
+                                :cy="annotation.y1" :r="radius"></circle>
+                        <line
+                              v-for="annotation in annotations.filter(a => (a.x1 !== a.x2 || a.y1 !== a.y2) && a.color === 'b')"
+                              stroke="#003088" stroke-width="12" stroke-linecap="round" marker-end="url(#arrowhead-b)"
+                              :opacity="1" :x1="annotation.x1" :y1="annotation.y1" :x2="annotation.x2"
+                              :y2="annotation.y2"></line>
+
                         <template v-if="annotationPreview">
-                            <circle v-if="(annotationPreview.x1 === annotationPreview.x2 && annotationPreview.y1 === annotationPreview.y2) && !annotationPreview.shift"
+                            <circle v-if="(annotationPreview.x1 === annotationPreview.x2 && annotationPreview.y1 === annotationPreview.y2) && annotationPreview.color === 'r'"
+                                    stroke="#882020" stroke-width="3" fill="none" :opacity="0.67"
+                                    :cx="annotationPreview.x1"
+                                    :cy="annotationPreview.y1" :r="radius"></circle>
+                            <line v-if="(annotationPreview.x1 !== annotationPreview.x2 || annotationPreview.y1 !== annotationPreview.y2) && annotationPreview.color === 'r'"
+                                  stroke="#882020" stroke-width="10" stroke-linecap="round"
+                                  marker-end="url(#arrowhead-r)"
+                                  :opacity="0.67" :x1="annotationPreview.x1" :y1="annotationPreview.y1"
+                                  :x2="annotationPreview.x2" :y2="annotationPreview.y2">
+                            </line>
+
+                            <circle v-if="(annotationPreview.x1 === annotationPreview.x2 && annotationPreview.y1 === annotationPreview.y2) && annotationPreview.color === 'g'"
                                     stroke="#157818" stroke-width="3" fill="none" :opacity="0.67"
                                     :cx="annotationPreview.x1"
-                                    :cy="annotationPreview.y1" r="30"></circle>
-                            <line v-if="(annotationPreview.x1 !== annotationPreview.x2 || annotationPreview.y1 !== annotationPreview.y2) && !annotationPreview.shift"
+                                    :cy="annotationPreview.y1" :r="radius"></circle>
+                            <line v-if="(annotationPreview.x1 !== annotationPreview.x2 || annotationPreview.y1 !== annotationPreview.y2) && annotationPreview.color === 'g'"
                                   stroke="#157818" stroke-width="10" stroke-linecap="round"
                                   marker-end="url(#arrowhead-g)"
                                   :opacity="0.67" :x1="annotationPreview.x1" :y1="annotationPreview.y1"
                                   :x2="annotationPreview.x2" :y2="annotationPreview.y2">
                             </line>
 
-                            <circle v-if="(annotationPreview.x1 === annotationPreview.x2 && annotationPreview.y1 === annotationPreview.y2) && annotationPreview.shift"
-                                    stroke="#882020" stroke-width="3" fill="none" :opacity="0.67"
+                            <circle v-if="(annotationPreview.x1 === annotationPreview.x2 && annotationPreview.y1 === annotationPreview.y2) && annotationPreview.color === 'b'"
+                                    stroke="#003088" stroke-width="3" fill="none" :opacity="0.67"
                                     :cx="annotationPreview.x1"
-                                    :cy="annotationPreview.y1" r="30"></circle>
-                            <line v-if="(annotationPreview.x1 !== annotationPreview.x2 || annotationPreview.y1 !== annotationPreview.y2) && annotationPreview.shift"
-                                  stroke="#882020" stroke-width="10" stroke-linecap="round"
-                                  marker-end="url(#arrowhead-r)"
+                                    :cy="annotationPreview.y1" :r="radius"></circle>
+                            <line v-if="(annotationPreview.x1 !== annotationPreview.x2 || annotationPreview.y1 !== annotationPreview.y2) && annotationPreview.color === 'b'"
+                                  stroke="#003088" stroke-width="10" stroke-linecap="round"
+                                  marker-end="url(#arrowhead-b)"
                                   :opacity="0.67" :x1="annotationPreview.x1" :y1="annotationPreview.y1"
                                   :x2="annotationPreview.x2" :y2="annotationPreview.y2">
                             </line>
                         </template>
+
+                        <line v-if="analyze && scores[game.currMove]?.bestMove" stroke="#101010" stroke-width="10"
+                              stroke-linecap="round" marker-end="url(#arrowhead-pb)" :opacity="0.67"
+                              :x1="scores[game.currMove]?.bestMove.x1" :y1="scores[game.currMove]?.bestMove.y1"
+                              :x2="scores[game.currMove]?.bestMove.x2" :y2="scores[game.currMove]?.bestMove.y2">
                     </svg>
                 </div>
 
                 <div class="sidebar-right">
-                    <div></div>
+                    <div class="engine">
+                        <template v-if="analysisEnabled && ['spec', 'analysis'].includes(game.gamemode)">
+                            <div v-if="engine" class="labels">
+                                <span>{{ engine }} {{ engineVer }} <span class="tag">{{ this.engineTag }}</span></span>
+                                <span>Profundidade: {{ currDepth }}/{{ config.depth }}</span>
+                            </div>
+
+                            <div>
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="inputAnalyze" name="analyze"
+                                           v-model="analyze">
+                                    <label class="custom-control-label" for="inputAnalyze"></label>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
 
                     <div class="sidebar-info">
                         <div class="player">
@@ -268,13 +366,18 @@
                             </ul>
                         </div>
 
-                        <div class="history">
-                            <template v-for="(movement, i) in game.movements">
-                                <span v-if="i % 2 === 0" class="rowid">{{ i / 2 + 1 }}</span>
-                                <span class="movement"
-                                      :class="{current: i === game.currMove, clickable: true}"
-                                      @click="boardAt(i)">{{ movement }}</span>
-                            </template>
+                        <div class="historyResult">
+                            <div class="history">
+                                <template v-for="(movement, i) in game.movements">
+                                    <span v-if="i % 2 === 0" class="rowid">{{ i / 2 + 1 }}</span>
+                                    <span class="movement"
+                                          :class="{current: i === game.currMove, clickable: true}"
+                                          @click="boardAt(i)">{{ movement }}
+                                        <span v-if="analyze && ['spec', 'analysis'].includes(game.gamemode) && scores[i]"
+                                              class="score">{{ scores[i]?.score }}</span>
+                                    </span>
+                                </template>
+                            </div>
 
                             <span v-if="game.result" class="result">{{ game.result }}</span>
                         </div>
@@ -298,7 +401,7 @@
                         </div>
                     </div>
 
-                    <div v-if="['smp', 'mp'].includes(game.gamemode)" class="controls">
+                    <div v-if="['sp', 'smp', 'mp'].includes(game.gamemode)" class="controls">
                         <i v-if="game.fen.length > 1 && (game.gamemode === 'smp' || game.currPlayer !== game.playerColor)"
                            class="fa fa-undo"
                            @click="requestUndo()"
@@ -318,7 +421,8 @@
     <script type="text/javascript"
             src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/js/bootstrap.min.js"></script>
 
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/stockfish.wasm@0.9.1/stockfish.js"></script>
+    <script type="text/javascript" src="node_modules/stockfish.wasm/stockfish.js"></script>
+
     <script type="module" src="js/main.js"></script>
 </body>
 </html>

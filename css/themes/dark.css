@@ -35,6 +35,11 @@
     --movement-row-id:  rgba(255,255, 255, 0.20);
     --movement-hover:  rgba(36, 186, 206, 0.2);
     --movement-current:  rgba(23, 248, 248, 0.2);
+
+    --scrollbar-thumb: rgb(112, 112, 112);
+    --scrollbar-thumb-hover: rgb(138, 138, 138);
+    --scrollbar-thumb-active: rgb(165, 165, 165);
+    --scrollbar-track: rgb(50, 50, 50);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -75,5 +80,10 @@
         --movement-row-id:  rgba(255,255, 255, 0.20);
         --movement-hover:  rgba(36, 186, 206, 0.2);
         --movement-current:  rgba(23, 248, 248, 0.2);
+
+        --scrollbar-thumb: rgb(112, 112, 112);
+        --scrollbar-thumb-hover: rgb(138, 138, 138);
+        --scrollbar-thumb-active: rgb(165, 165, 165);
+        --scrollbar-track: rgb(50, 50, 50);
     }
 }
