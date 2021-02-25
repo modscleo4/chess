@@ -679,7 +679,7 @@ export function pgnToCoord(pgn, board, currPlayer, lastMoved) {
         for (let x = i ?? 0; x < board.length; x++) {
             const row = board[x];
 
-            if (i && x !== i) {
+            if (i !== undefined && x !== i) {
                 continue;
             }
 
@@ -689,7 +689,7 @@ export function pgnToCoord(pgn, board, currPlayer, lastMoved) {
                     continue;
                 }
 
-                if (j && y !== j) {
+                if (j !== undefined && y !== j) {
                     continue;
                 }
 
