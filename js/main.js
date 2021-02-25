@@ -186,7 +186,7 @@ const app = Vue.createApp({
 
         simd().then(simdSupported => {
             if (simdSupported) {
-                importScript('../node_modules/stockfish-nnue.wasm/stockfish.js');
+                importScript('node_modules/stockfish-nnue.wasm/stockfish.js');
                 this.engineVer = '13';
                 this.engineTag = 'NNUE';
             } else {
