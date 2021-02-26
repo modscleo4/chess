@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="pt-br" theme="system">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
+
+    <meta name="description" content="Chess.js" />
+    <meta name="keywords" content="html, html5, css, css3, js, vue, vuejs" />
+    <meta name="robots" content="index" />
+    <meta name="author" content="Modscleo4" />
+
+    <title>Chess</title>
+
+    <!-- Bootstrap 4.5.2 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/css/bootstrap.min.css">
+
+    <!-- Font Awesome 4.7.0 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/themes/light.css" />
+    <link rel="stylesheet" href="css/themes/dark.css" />
+
+    <!-- <link rel="manifest" href="manifest.json" /> -->
+
+    <link rel="icon" href="favicon.png" />
+</head>
+
+<body>
+    <script type="text/javascript" src="js/theme.js"></script>
+
+    <div id="app">
+        <div v-if="!engine.loaded" class="loading"></div>
+
+        <div v-if="!game.start" class="mainMenu">
+            <header>
+                <h1>Chess.js</h1>
+            </header>
+
+            <div class="gamemodes" v-if="!game.gamemode">
+                <button type="button" class="btn btn-secondary"
+                        @click="game.gamemode = 'sp'; selectMode = false; selectVariant = true; createGame = true;">
+                    Singleplayer (vs Engine)</button>
+                <button type="button" class="btn btn-primary"
+                        @click="game.gamemode = 'smp'; selectMode = false; selectVariant = true; createGame = true;">
+                    Multiplayer local</button>
+                <button type="button" class="btn btn-success"
+                        @click="game.gamemode = 'mp'; selectMode = true;">
+                    Multiplayer online</button>
+                <button type="button" class="btn btn-info"
+                        @click="game.gamemode = 'history';">
+                    Histórico de Partidas</button>
+                <button type="button" class="btn btn-danger"
+                        @click="game.gamemode = 'settings';">
+                    Configurações</button>
+            </div>
+
+            <div v-if="selectMode" class="hidden mode-selector" :class="{visible: true}">
+                <button type="button" class="btn btn-success"
+                        @click="connection.gameid = null; game.gamemode = 'mp'; selectMode = false; selectVariant = true; createGame = true;">
+                    Criar Novo Jogo</button>
+                <button type="button" class="btn btn-info"
+                        @click="selectMode = false; game.gamemode = 'mp'; selectVariant = true; createGame = false;">
+                    Entrar em Jogo existente</button>
+                <button type="button" class="btn btn-warning"
+                        @click="game.gamemode = 'spec'; selectMode = false; selectVariant = true;">
+                    Assistir partida</button>
+
+                <button type="button" class="btn btn-secondary"
+                        @click="game.gamemode = null; selectMode = false;">Voltar</button>
+            </div>
+
+            <div v-if="selectVariant" class="hidden variant-selector" :class="{visible: true}">
+                <form @submit.prevent="startGame();">
+                    <div v-if="game.gamemode === 'mp' && !createGame || game.gamemode === 'spec'" class="form-group">
+                        <label for="inputGameID">ID do jogo</label>
+                        <input id="inputGameID" name="gameID" class="form-control" type="text"
+                               v-model="connection.gameid" required />
+                    </div>
+
+                    <div v-if="['mp'].includes(game.gamemode)" class="form-group">
+                        <label for="inputPlayerName">Nome de jogador</label>
+                        <input id="inputPlayerName" name="playerName" class="form-control" type="text"
+                               v-model="playerName" maxlength="16" required />
+                    </div>
+
+                    <div v-if="game.gamemode === 'sp'" class="form-group">
+                        <label for="inputEngineElo">Elo da Engine</label>
+                        <input id="inputEngineElo" name="engineElo" class="form-control" type="number"
+                               v-model="config.engineElo" :min="engine.options['UCI_Elo']?.min ?? 300"
+                               :max="engine.options['UCI_Elo']?.max ?? 3200" required />
+                    </div>
+
+                    <div v-if="game.gamemode !== 'spec' && createGame" class="form-group">
+                        <label for="inputTimePlayer">Tempo para jogadas (-1 = Infinito)</label>
+                        <input id="inputTimePlayer" name="timePlayer" class="form-control" type="number" step="1"
+                               min="-1" max="180" v-model.number="game.timePlayer" required />
+                    </div>
+
+                    <div v-if="game.gamemode !== 'spec' && createGame" class="form-group">
+                        <label for="inputTimeInc">Tempo adicional</label>
+                        <input id="inputTimeInc" name="timeInc" class="form-control" type="number" step="1" min="0"
+                               max="180" v-model.number="game.timeInc" required />
+                    </div>
+
+                    <button type="button" class="btn btn-secondary mr-3"
+                            @click="!['mp', 'spec'].includes(game.gamemode) && (game.gamemode = null); ['mp', 'spec'].includes(game.gamemode) && (selectMode = true); selectVariant = false; createGame = false;">Voltar</button>
+                    <button type="submit" class="btn btn-success">Iniciar
+                        Jogo</button>
+                </form>
+            </div>
+
+            <div v-if="game.gamemode === 'history'">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th scope="col">#</th>
+                            <th>Data</th>
+                            <th>Modo</th>
+                            <th>Resultado</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(game, i) in matchHistory()">
+                            <td>{{ i + 1 }}</td>
+                            <td>{{ new Date(game.date).toLocaleString() }}</td>
+                            <td>
+                                {{ {sp: 'Singleplayer', smp: 'Multiplayer Local', mp: 'Multiplayer Online', spec: 'Online (assistida)'}[game.gamemode] }}
+                            </td>
+                            <td>{{ game.result }}</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-success"
+                                        @click="watch(game)">Assistir</button>
+                                <button type="button" class="btn btn-sm btn-outline-info ml-2"
+                                        @click="copyToClipboard(movementsToPGN(game.movements, game.result))">
+                                    Copiar PGN</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <button type="button" class="btn btn-secondary"
+                        @click="game.gamemode = null;">Voltar</button>
+            </div>
+
+            <div v-if="game.gamemode === 'settings'" class="settings">
+                <form class="form-horizontal">
+                    <fieldset>
+                        <legend>Tabuleiro</legend>
+
+                        <div class="form-group">
+                            <label for="inputColorEven">Casas claras</label>
+                            <input id="inputColorEven" name="colorEven" class="form-control form-control-sm"
+                                   type="color"
+                                   v-model="config.colorEven" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputColorOdd">Casas escuras</label>
+                            <input id="inputColorOdd" name="colorOdd" class="form-control form-control-sm" type="color"
+                                   v-model="config.colorOdd"
+                                   required />
+                        </div>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Engine</legend>
+
+                        <div class="form-group">
+                            <label for="inputDepth">Profundidade</label>
+                            <input id="inputDepth" name="depth" class="form-control form-control-sm" type="range"
+                                   min="0"
+                                   max="50" v-model="config.depth" :title="config.depth" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputThreads">Threads</label>
+                            <input id="inputThreads" name="threads" class="form-control form-control-sm" type="range"
+                                   min="1"
+                                   :max="maxThreads" v-model="config.threads" :title="config.threads" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputHash">Tamanho da Hash Table</label>
+                            <input id="inputHash" name="hash" class="form-control form-control-sm" type="range"
+                                   min="1"
+                                   :max="maxRAM" v-model="config.hash" :title="config.hash" required />
+                        </div>
+                    </fieldset>
+                </form>
+
+                <button type="button" class="btn btn-secondary"
+                        @click="game.gamemode = null;">Voltar</button>
+            </div>
+
+            <footer>
+                <p>Modscleo4 © <span :style="{display: 'none'}">2021</span>
+                    <span class="hidden" :class="{visible: true}">{{ new Date().getFullYear() }}</span>
+                </p>
+            </footer>
+        </div>
+
+        <template v-if="game.start || game.gamemode === 'settings'" class="hidden" :class="{visible: true}">
+            <div v-if="game.gamemode === 'mp' && !connection.canStart" class="waiting-player">
+                <p>Game ID: <a :href="`${page}/?gameid=${connection.gameid}&gamemode=mp`">{{ connection.gameid }}</a>
+                </p>
+                <p>Esperando pelo outro jogador...</p>
+
+                <button type="button" class="btn btn-secondary"
+                        @click="reset();">Cancelar</button>
+            </div>
+
+            <div v-if="game.gamemode === 'spec' && !connection.canStart" class="waiting-player">
+                <p>Game ID: <a :href="`${page}/?gameid=${connection.gameid}&gamemode=spec`">{{ connection.gameid }}</a>
+                </p>
+                <p>Esperando pelos jogadores...</p>
+            </div>
+
+            <div v-if="(['mp', 'spec'].includes(game.gamemode) && connection.canStart) || ['sp', 'smp', 'analysis', 'settings'].includes(game.gamemode)"
+                 class="content">
+                <div>
+
+                </div>
+
+                <div class="chessboard-container" :class="{'inverted': game.playerColor === 'black'}"
+                     :style="{'--even': config.colorEven, '--odd': config.colorOdd}">
+                    <table @mouseup.left="clearAnnotations()" class="chessboard">
+                        <tbody>
+                            <tr v-for="(board_row, i) in game.board" :key="i">
+                                <td :id="`cell_${i}_${j}`" v-for="(board_cell, j) in board_row" :key="j"
+                                    :class="{'clickable': !game._board && !['analysis', 'spec'].includes(game.gamemode) && (board_cell?.color === game.playerColor && game.playerColor === game.currPlayer),
+                                            'moved': game.currentMove.some(([_i, _j]) => _i === i && _j === j),
+                                            'checked': board_cell?.checked,
+                                            'validMove': validMoves.some(([_i, _j]) => _i === i && _j === j),
+                                            'hasPiece': board_cell}"
+                                    :draggable="!game._board && !['analysis', 'spec'].includes(game.gamemode) && (board_cell?.color === game.playerColor && game.playerColor === game.currPlayer)"
+                                    @click="clickPiece(i, j)"
+                                    @drag="dragPiece(i, j)"
+                                    @dragstart="setDragImage(i, j, $event)" @dragend="dragEnd(i, j)"
+                                    @dragenter.prevent="dragEnter(i, j, $event)"
+                                    @dragover.prevent="dragOver(i, j, $event)"
+                                    @drop.stop.prevent="drop(i, j)"
+                                    @contextmenu.prevent
+                                    @mousedown.right="startArrow(i, j, $event.shiftKey, $event.altKey)"
+                                    @mousemove="moveArrow(i, j)" @mouseup.right="endArrow(i, j)">
+                                    <img v-if="board_cell" :src="`assets/${board_cell.image}.png`" alt=""
+                                         draggable="false">
+                                    <span v-if="i === 7"
+                                          class="file">{{ ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j] }}</span>
+                                    <span v-if="j === 7" class="rank">{{ 8 - i }}</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <svg class="annotations">
+                        <defs>
+                            <marker id="arrowhead-pb" orient="auto" markerWidth="4" markerHeight="8" refX="2.01"
+                                    refY="2.01" cgKey="pb">
+                                <path d="M0,0 V4 L3,2 Z" fill="#101010"></path>
+                            </marker>
+                            <marker id="arrowhead-r" orient="auto" markerWidth="4" markerHeight="8" refX="2.05"
+                                    refY="2.01" cgKey="r">
+                                <path d="M0,0 V4 L3,2 Z" fill="#882020"></path>
+                            </marker>
+                            <marker id="arrowhead-g" orient="auto" markerWidth="4" markerHeight="8" refX="2.01"
+                                    refY="2.01" cgKey="g">
+                                <path d="M0,0 V4 L3,2 Z" fill="#15781B"></path>
+                            </marker>
+                            <marker id="arrowhead-b" orient="auto" markerWidth="4" markerHeight="8" refX="2.01"
+                                    refY="2.01" cgKey="g">
+                                <path d="M0,0 V4 L3,2 Z" fill="#003088"></path>
+                            </marker>
+                        </defs>
+
+                        <circle v-for="annotation in annotations.filter(a => a.x1 === a.x2 && a.y1 === a.y2 && a.color === 'r')"
+                                stroke="#882020" stroke-width="4" fill="none" :opacity="1" :cx="annotation.x1"
+                                :cy="annotation.y1" :r="radius"></circle>
+                        <line v-for="annotation in annotations.filter(a => (a.x1 !== a.x2 || a.y1 !== a.y2) && a.color === 'r')"
+                              stroke="#882020" stroke-width="12" stroke-linecap="round" marker-end="url(#arrowhead-r)"
+                              :opacity="1" :x1="annotation.x1" :y1="annotation.y1" :x2="annotation.x2"
+                              :y2="annotation.y2"></line>
+
+                        <circle
+                                v-for="annotation in annotations.filter(a => (a.x1 === a.x2 && a.y1 === a.y2) && a.color === 'g')"
+                                stroke="#157818" stroke-width="4" fill="none" :opacity="1" :cx="annotation.x1"
+                                :cy="annotation.y1" :r="radius"></circle>
+                        <line
+                              v-for="annotation in annotations.filter(a => (a.x1 !== a.x2 || a.y1 !== a.y2) && a.color === 'g')"
+                              stroke="#157818" stroke-width="12" stroke-linecap="round" marker-end="url(#arrowhead-g)"
+                              :opacity="1" :x1="annotation.x1" :y1="annotation.y1" :x2="annotation.x2"
+                              :y2="annotation.y2"></line>
+
+                        <circle
+                                v-for="annotation in annotations.filter(a => (a.x1 === a.x2 && a.y1 === a.y2) && a.color === 'b')"
+                                stroke="#003088" stroke-width="4" fill="none" :opacity="1" :cx="annotation.x1"
+                                :cy="annotation.y1" :r="radius"></circle>
+                        <line
+                              v-for="annotation in annotations.filter(a => (a.x1 !== a.x2 || a.y1 !== a.y2) && a.color === 'b')"
+                              stroke="#003088" stroke-width="12" stroke-linecap="round" marker-end="url(#arrowhead-b)"
+                              :opacity="1" :x1="annotation.x1" :y1="annotation.y1" :x2="annotation.x2"
+                              :y2="annotation.y2"></line>
+
+                        <template v-if="annotationPreview">
+                            <circle v-if="(annotationPreview.x1 === annotationPreview.x2 && annotationPreview.y1 === annotationPreview.y2) && annotationPreview.color === 'r'"
+                                    stroke="#882020" stroke-width="3" fill="none" :opacity="0.67"
+                                    :cx="annotationPreview.x1"
+                                    :cy="annotationPreview.y1" :r="radius"></circle>
+                            <line v-if="(annotationPreview.x1 !== annotationPreview.x2 || annotationPreview.y1 !== annotationPreview.y2) && annotationPreview.color === 'r'"
+                                  stroke="#882020" stroke-width="10" stroke-linecap="round"
+                                  marker-end="url(#arrowhead-r)"
+                                  :opacity="0.67" :x1="annotationPreview.x1" :y1="annotationPreview.y1"
+                                  :x2="annotationPreview.x2" :y2="annotationPreview.y2">
+                            </line>
+
+                            <circle v-if="(annotationPreview.x1 === annotationPreview.x2 && annotationPreview.y1 === annotationPreview.y2) && annotationPreview.color === 'g'"
+                                    stroke="#157818" stroke-width="3" fill="none" :opacity="0.67"
+                                    :cx="annotationPreview.x1"
+                                    :cy="annotationPreview.y1" :r="radius"></circle>
+                            <line v-if="(annotationPreview.x1 !== annotationPreview.x2 || annotationPreview.y1 !== annotationPreview.y2) && annotationPreview.color === 'g'"
+                                  stroke="#157818" stroke-width="10" stroke-linecap="round"
+                                  marker-end="url(#arrowhead-g)"
+                                  :opacity="0.67" :x1="annotationPreview.x1" :y1="annotationPreview.y1"
+                                  :x2="annotationPreview.x2" :y2="annotationPreview.y2">
+                            </line>
+
+                            <circle v-if="(annotationPreview.x1 === annotationPreview.x2 && annotationPreview.y1 === annotationPreview.y2) && annotationPreview.color === 'b'"
+                                    stroke="#003088" stroke-width="3" fill="none" :opacity="0.67"
+                                    :cx="annotationPreview.x1"
+                                    :cy="annotationPreview.y1" :r="radius"></circle>
+                            <line v-if="(annotationPreview.x1 !== annotationPreview.x2 || annotationPreview.y1 !== annotationPreview.y2) && annotationPreview.color === 'b'"
+                                  stroke="#003088" stroke-width="10" stroke-linecap="round"
+                                  marker-end="url(#arrowhead-b)"
+                                  :opacity="0.67" :x1="annotationPreview.x1" :y1="annotationPreview.y1"
+                                  :x2="annotationPreview.x2" :y2="annotationPreview.y2">
+                            </line>
+                        </template>
+
+                        <line v-if="analyze && scores[game.currMove]?.bestMove" stroke="#101010" stroke-width="10"
+                              stroke-linecap="round" marker-end="url(#arrowhead-pb)" :opacity="0.67"
+                              :x1="scores[game.currMove]?.bestMove.x1" :y1="scores[game.currMove]?.bestMove.y1"
+                              :x2="scores[game.currMove]?.bestMove.x2" :y2="scores[game.currMove]?.bestMove.y2">
+                    </svg>
+                </div>
+
+                <div class="sidebar-right">
+                    <div class="engine">
+                        <p v-if="engine.calculating" class="calculating">Calculando...</p>
+
+                        <template v-if="analysisEnabled && ['spec', 'analysis'].includes(game.gamemode)">
+                            <div v-if="engine" class="labels">
+                                <span>{{ engine.name }} {{ engine.ver }} <span
+                                          class="tag">{{ engine.tag }}</span></span>
+                                <span>Profundidade: {{ currDepth }}/{{ config.depth }}</span>
+                            </div>
+
+                            <div>
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="inputAnalyze" name="analyze"
+                                           v-model="analyze">
+                                    <label class="custom-control-label" for="inputAnalyze"></label>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="sidebar-info">
+                        <div class="player">
+                            <div class="player-name" :class="{'current-player': game.currPlayer !== game.playerColor}">
+                                <span></span>
+                                <span>{{ game.playerNames[game.playerColor === 'white' ? 'black' : 'white'] }}</span>
+                                <span class="timer">
+                                    {{ parseS(game.timePlayer * 60 -{white: game.player2Timer, black: game.player1Timer}[game.playerColor]) }}
+                                </span>
+                            </div>
+
+                            <ul class="pieces">
+                                <li v-for="piece in (game.playerColor === 'white' ? takenPiecesW() : takenPiecesB())">
+                                    <img :src="`assets/${piece.image}.png`" alt="" />
+                                </li>
+
+                                <li class="advantage">
+                                    {{ pointsAdvantage(game.playerColor === 'white' ? 'black' : 'white') }}
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="historyResult">
+                            <div class="history">
+                                <template v-for="(movement, i) in game.movements">
+                                    <span v-if="i % 2 === 0" class="rowid">{{ i / 2 + 1 }}</span>
+                                    <span class="movement"
+                                          :class="{current: i === game.currMove, clickable: true}"
+                                          @click="boardAt(i)">{{ movement }}
+                                        <span v-if="analyze && ['spec', 'analysis'].includes(game.gamemode) && scores[i]"
+                                              class="score">{{ scores[i]?.score }}</span>
+                                    </span>
+                                </template>
+                            </div>
+
+                            <span v-if="game.result" class="result">{{ game.result }}</span>
+                        </div>
+
+                        <div class="player">
+                            <ul class="pieces">
+                                <li v-for="piece in (game.playerColor === 'white' ? takenPiecesB() : takenPiecesW())">
+                                    <img :src="`assets/${piece.image}.png`" alt="" />
+                                </li>
+
+                                <li class="advantage">{{ pointsAdvantage(game.playerColor) }}</li>
+                            </ul>
+
+                            <div class="player-name" :class="{'current-player': game.currPlayer === game.playerColor}">
+                                <span></span>
+                                <span>{{ game.playerNames[game.playerColor] }}</span>
+                                <span class="timer">
+                                    {{ parseS(game.timePlayer * 60 - {white: game.player1Timer, black: game.player2Timer}[game.playerColor]) }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="['sp', 'smp', 'mp'].includes(game.gamemode)" class="controls">
+                        <i v-if="game.fen.length > 1 && (game.gamemode === 'smp' || game.currPlayer !== game.playerColor)"
+                           class="fa fa-undo"
+                           @click="requestUndo()"
+                           title="Voltar jogada"></i>
+                        <i class="fa fa-flag" @click="requestForfeit()" title="Desistir"></i>
+                        <i v-if="game.canRequestDraw" class="fa fa-handshake-o" @click="requestDraw()"
+                           title="Empate"></i>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script type="text/javascript"
+            src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+    <script type="text/javascript"
+            src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/js/bootstrap.min.js"></script>
+
+    <script type="text/javascript" src="node_modules/stockfish.wasm/stockfish.js"></script>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

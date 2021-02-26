@@ -7,7 +7,10 @@
     "url": "git+https://github.com/modscleo4/chess.git"
   },
   "main": "index.js",
-  "scripts": {},
+  "type": "module",
+  "scripts": {
+    "start": "node --experimental-json-modules ."
+  },
   "keywords": [],
   "author": {
     "name": "Dhiego Cassiano Fogaça Barbosa",
@@ -19,7 +22,18 @@
   },
   "homepage": "modscleo4.github.io/chess",
   "dependencies": {
+    "bufferutil": "^4.0.3",
+    "mime-types": "^2.1.29",
     "stockfish-nnue.wasm": "^0.0.1",
-    "stockfish.wasm": "^0.9.1"
+    "stockfish.wasm": "^0.10.0",
+    "utf-8-validate": "^5.0.4",
+    "ws": "^7.4.2"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.7"
+  },
+  "engines": {
+    "node": "^14",
+    "npm": "^7"
   }
 }

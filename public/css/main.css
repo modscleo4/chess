@@ -1,0 +1,609 @@
+@import url('https://fonts.googleapis.com/css2?family=Raleway&display=swap');
+
+@font-face {
+    font-family: 'Granotta';
+    src: url('../assets/fonts/Granotta.ttf');
+}
+
+* {
+    box-sizing: border-box;
+}
+
+:root {
+    --board-rotate-time: 1000ms;
+}
+
+html,
+body {
+    font-family: 'Raleway', sans-serif;
+    font-size: 18px;
+    margin: 0;
+    scroll-behavior: smooth;
+    /* overflow-x: hidden; */
+    background-size: cover;
+    background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%) no-repeat 50% 50%;
+    color: var(--text-color);
+    padding-right: 0 !important; /* Because of Bootstrap Modals */
+
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    scrollbar-width: thin;
+}
+
+a {
+    color: var(--link-color);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--link-color-hover);
+    text-decoration: underline;
+}
+
+.modal-content {
+    background-color: var(--even);
+}
+
+.modal-content .close {
+    color: var(--text-color) !important;
+}
+
+.modal-header {
+    border-color: var(--odd);
+}
+
+.custom-select {
+    background: var(--custom-select-bg) no-repeat right .75rem center/8px 10px;
+    background-color: var(--input-background-color);
+    color: var(--text-color);
+    border-color: var(--input-border-color);
+}
+
+.custom-control-label::before {
+    background-color: var(--input-background-color);
+}
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-button {
+    width: 0;
+    height: 0;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border: none;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-thumb:active {
+    background-color: var(--scrollbar-thumb-active);
+}
+
+::-webkit-scrollbar-track {
+    background-color: var(--scrollbar-track);
+    border: none;
+}
+
+::-webkit-scrollbar-corner {
+    background-color: transparent;
+}
+
+.table {
+    color: unset;
+}
+
+.menu {
+    position: fixed;
+    background-color: rgba(0, 0, 0, 0.25);
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    left: 0;
+    top: 0;
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(1px);
+}
+
+.hidden {
+    display: none;
+}
+
+.visible {
+    display: unset;
+}
+
+#app {
+    width: 100%;
+    min-width: 400px;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mainMenu {
+    display: grid;
+    grid-template-rows: auto auto auto;
+    grid-row-gap: 64px;
+    text-align: center;
+    padding-top: 24px;
+}
+
+.mainMenu header h1 {
+    font-family: 'Granotta';
+    font-size: 4em;
+}
+
+.mainMenu .gamemodes,
+.mainMenu .mode-selector {
+    display: grid;
+    grid-template-columns: auto;
+    grid-row-gap: 1em;
+}
+
+.mainMenu .variant-selector .form-group {
+    text-align: left;
+}
+
+.mainMenu .variant-selector .form-group input {
+    font-size: 1rem;
+}
+
+.mainMenu .settings .form-group {
+    text-align: left;
+}
+
+#app .content {
+    display: grid;
+    grid-template-columns: minmax(max-content, 250px) max-content 250px;
+    grid-column-gap: 32px;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.waiting-player {
+    text-align: center;
+    background-color: var(--card-opaque-bg);
+    padding: 48px;
+}
+
+.game-container {
+    position: relative;
+}
+
+.game-over,
+.loading {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.25);
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    left: 0;
+    top: 0;
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 4em;
+    cursor: unset;
+    backdrop-filter: blur(1px);
+    text-align: center;
+}
+
+.chessboard-container {
+    position: relative;
+    transition: all var(--board-rotate-time) ease;
+    box-shadow: 2px 2px 10px 0 rgb(16, 16, 16);
+}
+
+table.chessboard {
+    font-family: monospace;
+    user-select: none;
+    font-size: 19px;
+}
+
+.chessboard-container.inverted {
+    transform: rotate(180deg);
+    box-shadow:  -2px -2px 10px 0 rgb(16, 16, 16);
+}
+
+.chessboard-container.inverted tr td img {
+    transform: rotate(-180deg);
+}
+
+.chessboard-container.inverted tr td .file,
+.chessboard-container.inverted tr td .rank {
+    transform: rotate(-180deg);
+}
+
+table.chessboard tr td {
+    width: 4em;
+    height: 4em;
+    position: relative;
+}
+
+table.chessboard tr td.clickable {
+    cursor: grab;
+}
+
+table.chessboard tr td .file,
+table.chessboard tr td .rank {
+    position: absolute;
+    padding: 0;
+    margin: 0;
+    font-size: 0.9rem;
+    transition: all var(--board-rotate-time) ease;
+    text-shadow: 1px 1px 12px black;
+}
+
+table.chessboard tr td .file {
+    bottom: -2px;
+    left: 2px;
+}
+
+table.chessboard tr td .rank {
+    top: -2px;
+    right: 2px;
+}
+
+table.chessboard tr td img {
+    pointer-events: none;
+    transition: all var(--board-rotate-time) ease;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: auto;
+    max-height: 90%;
+}
+
+table.chessboard tr td.clickable img {
+    pointer-events: unset;
+}
+
+table.chessboard tr td.moving img {
+    opacity: 0.1;
+}
+
+table.chessboard tr:nth-child(even) td:nth-child(even) {
+    background-color: var(--even);
+    color: var(--odd);
+}
+
+table.chessboard tr:nth-child(even) td:nth-child(odd) {
+    background-color: var(--odd);
+    color: var(--even);
+}
+
+table.chessboard tr:nth-child(odd) td:nth-child(even) {
+    background-color: var(--odd);
+    color: var(--even);
+}
+
+table.chessboard tr:nth-child(odd) td:nth-child(odd) {
+    background-color: var(--even);
+    color: var(--odd);
+}
+
+table.chessboard tr td::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: auto;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+table.chessboard tr td.validMove:hover {
+    cursor: pointer;
+}
+
+table.chessboard tr td.validMove::before {
+    width: 50%;
+    height: 50%;
+    border-radius: 50%;
+    background-color: rgba(16, 83, 138, 0.45);
+}
+
+table.chessboard tr td.validMove.hasPiece::before {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    background: radial-gradient(transparent 0%, transparent 79%, rgba(33, 147, 240, 0.45) 80%);
+}
+
+table.chessboard tr td.moved::before {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    background-color: rgba(44, 204, 151, 0.50) !important;
+}
+
+table.chessboard tr td.checked::before {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    background-color: rgba(212, 0, 0, 0.50) !important;
+}
+
+table.chessboard tr td.validMove:hover::before,
+table.chessboard tr td.validMove.hover::before/*,
+table.chessboard tr td.validMove:active-drop-target::before*/ {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    background-color: rgba(33, 147, 240, 0.67) !important;
+}
+
+.annotations {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: auto;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0.75;
+}
+
+.sidebar-right {
+    display: grid;
+    grid-template-rows: 32px max-content 32px;
+    grid-row-gap: 8px;
+    align-items: center;
+    font-size: 1.05em;
+    justify-self: center;
+    width: 100%;
+}
+
+.sidebar-right .engine {
+    display: grid;
+    grid-template-columns: auto min-content;
+    align-items: center;
+}
+
+.sidebar-right .engine .calculating {
+    font-size: 0.85em;
+    margin: 0;
+}
+
+.sidebar-right .engine .labels {
+    display: grid;
+    grid-template-columns: auto;
+    font-size: 0.75em;
+}
+
+.sidebar-right .engine label {
+    cursor: pointer;
+}
+
+.sidebar-right .engine .labels .tag {
+    border-radius: 4px;
+    background-color: var(--card-opaque-bg);
+    padding: 2px;
+}
+
+.sidebar-right .sidebar-info {
+    display: grid;
+    grid-template-rows: auto 300px auto;
+    grid-row-gap: 32px;
+    background-color: var(--card-opaque-bg);
+    width: 100%;
+}
+
+.sidebar-right .sidebar-info .player {
+    display: grid;
+    grid-template-rows: auto auto;
+    grid-row-gap: 4px;
+}
+
+.sidebar-right .sidebar-info .player ul.pieces {
+    list-style: none;
+    margin: 0;
+    padding: 0 8px;
+}
+
+.sidebar-right .sidebar-info .player ul.pieces li {
+    display: inline;
+}
+
+.sidebar-right .sidebar-info .player ul.pieces li.advantage {
+    padding-left: 4px;
+}
+
+.sidebar-right .sidebar-info .player ul.pieces li img {
+    height: 16px;
+}
+
+.sidebar-right .sidebar-info .player-name {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content minmax(min-content, 1fr);
+    grid-column-gap: 8px;
+    font-weight: bold;
+    background-color: var(--card-opaque-bg);
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+}
+
+.sidebar-right .sidebar-info .player-name.current-player {
+    background-color: rgba(151, 68, 211, 0.49);
+}
+
+.sidebar-right .sidebar-info .player-name .timer {
+    text-align: right;
+    font-weight: normal;
+}
+
+.sidebar-right .sidebar-info .historyResult {
+    display: grid;
+    grid-template-rows: auto min-content;
+}
+
+.sidebar-right .sidebar-info .history {
+    display: grid;
+    grid-template-columns: min-content 1fr 1fr;
+    grid-auto-rows: min-content;
+    overflow-y: auto;
+    height: 100%;
+    border: 1px solid var(--card-opaque-bg);
+}
+
+.sidebar-right .sidebar-info .history span {
+    font-size: 0.85em;
+}
+
+.sidebar-right .sidebar-info .history .rowid {
+    background-color: var(--movement-row-id);
+    padding: 4px 12px 4px 4px;
+}
+
+.sidebar-right .sidebar-info .history .result {
+    border-top: 1px solid var(--card-opaque-bg);
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: 1em;
+}
+
+.sidebar-right .sidebar-info .history .movement {
+    display: grid;
+    grid-template-columns: auto min-content;
+    align-items: center;
+}
+
+.sidebar-right .sidebar-info .history .movement.clickable {
+    cursor: pointer;
+}
+
+.sidebar-right .sidebar-info .history .movement {
+    padding: 4px;
+}
+
+.sidebar-right .sidebar-info .history .movement.current {
+    background-color: var(--movement-current);
+}
+
+.sidebar-right .sidebar-info .history .movement:hover {
+    background-color: var(--movement-hover);
+}
+
+.sidebar-right .sidebar-info .history .movement .score {
+    font-size: 0.75em;
+    text-align: r;
+}
+
+.sidebar-right .sidebar-info .result {
+    padding: 4px;
+    text-align: center;
+    border: 1px solid var(--card-opaque-bg);
+    border-top: none;
+}
+
+.sidebar-right .controls {
+    display: grid;
+    grid-auto-flow: column;
+    grid-column-gap: 8px;
+    justify-content: end;
+}
+
+.sidebar-right .controls i {
+    cursor: pointer;
+    color: var(--link-color);
+}
+
+.sidebar-right .controls i:hover {
+    color: var(--link-color-hover);
+}
+
+.sidebar-right .controls i:active {
+    color: var(--link-color-active);
+}
+
+footer {
+    padding: 24px 0;
+    font-size: 0.85em;
+}
+
+footer p {
+    margin: 0;
+}
+
+@media (max-width: 954px) {
+    table.chessboard {
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 922px) {
+    #app .content {
+        grid-template-columns: max-content;
+        grid-template-rows: max-content max-content max-content;
+        grid-row-gap: 32px;
+        padding: 8px;
+    }
+
+    .sidebar-right {
+        font-size: 1.2em;
+    }
+}
+
+@media (max-width: 592px) {
+    table.chessboard {
+        font-size: 17px;
+    }
+}
+
+@media (max-width: 560px) {
+    table.chessboard {
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 528px) {
+    table.chessboard {
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 496px) {
+    table.chessboard {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 464px) {
+    #app .content {
+        padding: 4px;
+    }
+
+    table.chessboard {
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 424px) {
+    table.chessboard {
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 400px) {
+    .sidebar.open {
+        width: 100%;
+    }
+}

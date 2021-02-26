@@ -1,0 +1,89 @@
+:root[theme="dark"] {
+    --background-color: rgba(28, 28, 28, 0.9);
+    --bg-gradient-start: rgb(51, 51, 51);
+    --bg-gradient-end: rgb(35, 35, 35);
+    --card-color: rgb(19, 19, 19);
+    --body-color: rgb(147, 132, 212);
+
+    --text-color: rgba(220, 220, 220, 1);
+    --text-color-hover: rgb(141, 128, 194);
+    --link-color: rgb(236, 236, 236);
+    --link-color-hover: rgb(153, 138, 208);
+    --link-color-active: rgb(75, 54, 170);
+
+    --input-background-color: rgb(62, 62, 62);
+    --input-border-color: rgb(88, 88, 88);
+    --input-border-color-hover: rgb(28, 28, 28);
+    --input-border-color-focus: rgb(50, 50, 50);
+
+    --btn-text-color: rgb(231, 231, 231);
+    --btn-background-color: rgb(65, 48, 158);
+    --btn-background-color-hover: rgb(100, 30, 180);
+
+    --odd: rgb(64, 64, 64);
+    --even: rgb(212, 212, 212);
+
+    --custom-select-bg: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'><path fill='%23e6e7e8' d='M2 0L0 2h4zm0 5L0 3h4z'/></svg>");
+
+    --cell-border-color: rgba(128, 128, 128, 1);
+    --cell-background-color: rgba(255, 255, 255, 0.15);
+    --cell-background-hover: rgba(255, 255, 255, 0.25);
+    --cell-background-color-mousedown: rgba(255, 255, 255, 0.10);
+
+    --card-opaque-bg: rgba(255,255, 255, 0.20);
+
+    --movement-row-id:  rgba(255,255, 255, 0.20);
+    --movement-hover:  rgba(36, 186, 206, 0.2);
+    --movement-current:  rgba(23, 248, 248, 0.2);
+
+    --scrollbar-thumb: rgb(112, 112, 112);
+    --scrollbar-thumb-hover: rgb(138, 138, 138);
+    --scrollbar-thumb-active: rgb(165, 165, 165);
+    --scrollbar-track: rgb(50, 50, 50);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root[theme="system"] {
+        --background-color: rgba(28, 28, 28, 0.9);
+        --bg-gradient-start: rgb(51, 51, 51);
+        --bg-gradient-end: rgb(35, 35, 35);
+        --card-color: rgb(19, 19, 19);
+        --body-color: rgb(147, 132, 212);
+
+        --text-color: rgba(220, 220, 220, 1);
+        --text-color-hover: rgb(141, 128, 194);
+        --link-color: rgb(236, 236, 236);
+        --link-color-hover: rgb(153, 138, 208);
+        --link-color-active: rgb(75, 54, 170);
+
+        --input-background-color: rgb(62, 62, 62);
+        --input-border-color: rgb(88, 88, 88);
+        --input-border-color-hover: rgb(28, 28, 28);
+        --input-border-color-focus: rgb(50, 50, 50);
+
+        --btn-text-color: rgb(231, 231, 231);
+        --btn-background-color: rgb(65, 48, 158);
+        --btn-background-color-hover: rgb(100, 30, 180);
+
+        --odd: rgb(64, 64, 64);
+        --even: rgb(212, 212, 212);
+
+        --custom-select-bg: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'><path fill='%23e6e7e8' d='M2 0L0 2h4zm0 5L0 3h4z'/></svg>");
+
+        --cell-border-color: rgba(128, 128, 128, 1);
+        --cell-background-color: rgba(255, 255, 255, 0.15);
+        --cell-background-color-hover: rgba(255, 255, 255, 0.25);
+        --cell-background-color-mousedown: rgba(255, 255, 255, 0.10);
+
+        --card-opaque-bg: rgba(255,255, 255, 0.20);
+
+        --movement-row-id:  rgba(255,255, 255, 0.20);
+        --movement-hover:  rgba(36, 186, 206, 0.2);
+        --movement-current:  rgba(23, 248, 248, 0.2);
+
+        --scrollbar-thumb: rgb(112, 112, 112);
+        --scrollbar-thumb-hover: rgb(138, 138, 138);
+        --scrollbar-thumb-active: rgb(165, 165, 165);
+        --scrollbar-track: rgb(50, 50, 50);
+    }
+}
