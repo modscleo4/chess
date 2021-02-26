@@ -27,7 +27,6 @@ let stockfish;
 
 const app = Vue.createApp({
     data: () => ({
-        //page: '',
         page: '/',
         connection: {
             //protocol: 'ws',

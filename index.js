@@ -37,14 +37,17 @@ const server = http.createServer(async (request, response) => {
         response.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
         response.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
         response.setHeader('Access-Control-Allow-Origin', '*');
+        response.setHeader('Cache-Control', 'public, max-age=600');
+        response.setHeader('Content-Length', fs.statSync(path).size);
+        response.setHeader('Date', new Date().toUTCString());
+        response.setHeader('Expires', new Date(Date.now() + 1000 * 600).toUTCString());
+        //response.setHeader('Etag', crypto.createHash('md5').setEncoding('hex').update().read());
+        response.setHeader('Age', '0');
 
-        fs.readFile(path, (err, data) => {
-            if (err) {
-                response.statusCode = 500;
-                response.end();
-            }
-
-            response.write(data);
+        fs.createReadStream(path).pipe(response).on('finish', () => {
+            response.end();
+        }).on('error', () => {
+            response.statusCode = 500;
             response.end();
         });
     } else {
