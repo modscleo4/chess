@@ -1,62 +1,37 @@
 import WebSocket from 'ws';
-import http from 'http';
+import express from 'express';
+import compression from 'compression';
 import crypto from 'crypto';
-import fs from 'fs';
-import {lookup as getMimeType} from 'mime-types';
 import * as Chess from './public/js/chess.js';
 
 const port = parseInt(process.env.PORT || '3000');
 
-const server = http.createServer(async (request, response) => {
-    function parsePath(url) {
-        if (!url.startsWith('node_modules/')) {
-            url = 'public/' + url;
-        }
+const server = express()
+    .use(compression({filter: shouldCompress}))
+    .use((request, response, next) => {
+        response.set('Access-Control-Allow-Origin', ['*']);
+        response.set('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE');
+        response.set('Access-Control-Allow-Headers', 'Content-Type');
+        response.set('Cache-Control', 'public, max-age=600');
+        response.set('Expires', new Date(Date.now() + 1000 * 600).toUTCString());
+        response.set('Cross-Origin-Opener-Policy', 'same-origin');
+        response.set('Cross-Origin-Embedder-Policy', 'require-corp');
 
-        if (url.endsWith('/')) {
-            url += 'index.html';
-        }
+        next();
+    })
+    .use('/node_modules/', express.static('node_modules/'))
+    .use('/', express.static('public/'))
+    .listen(port);
 
-        return url;
+function shouldCompress(request, response) {
+    if (request.headers['x-no-compression']) {
+        // don't compress responses with this request header
+        return false;
     }
 
-    if (!request.url) {
-        response.statusCode = 400;
-        return;
-    }
-
-    if (request.url.startsWith('/')) {
-        request.url = request.url.replace(/^\//g, '');
-    }
-
-    if (request.url.startsWith('node_modules/') && fs.existsSync(request.url) || fs.existsSync(`public/${request.url}`)) {
-        const path = parsePath(request.url);
-        response.statusCode = 200;
-        response.setHeader('Content-Type', getMimeType(path) || 'text/plain');
-        response.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-        response.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-        response.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-        response.setHeader('Access-Control-Allow-Origin', '*');
-        response.setHeader('Cache-Control', 'public, max-age=600');
-        response.setHeader('Content-Length', fs.statSync(path).size);
-        response.setHeader('Date', new Date().toUTCString());
-        response.setHeader('Expires', new Date(Date.now() + 1000 * 600).toUTCString());
-        //response.setHeader('Etag', crypto.createHash('md5').setEncoding('hex').update().read());
-        response.setHeader('Age', '0');
-
-        fs.createReadStream(path).pipe(response).on('finish', () => {
-            response.end();
-        }).on('error', () => {
-            response.statusCode = 500;
-            response.end();
-        });
-    } else {
-        response.statusCode = 404;
-        response.end();
-    }
-});
-
-server.listen(port, '0.0.0.0');
+    // fallback to standard filter function
+    return compression.filter(request, response);
+}
 
 const ws = new WebSocket.Server({server});
 

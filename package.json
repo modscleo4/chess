@@ -23,7 +23,8 @@
   "homepage": "modscleo4.github.io/chess",
   "dependencies": {
     "bufferutil": "^4.0.3",
-    "mime-types": "^2.1.29",
+    "compression": "^1.7.4",
+    "express": "^4.17.1",
     "stockfish-nnue.wasm": "^0.0.1",
     "stockfish.wasm": "^0.10.0",
     "utf-8-validate": "^5.0.4",
