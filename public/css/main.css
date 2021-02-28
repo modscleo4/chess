@@ -422,6 +422,10 @@ table.chessboard tr td.validMove:active-drop-target::before*/ {
     display: inline;
 }
 
+.sidebar-right .sidebar-info .player ul.pieces li.separator {
+    margin-left: 4px;
+}
+
 .sidebar-right .sidebar-info .player ul.pieces li.advantage {
     padding-left: 4px;
 }

@@ -376,7 +376,8 @@
                             </div>
 
                             <ul class="pieces">
-                                <li v-for="piece in (game.playerColor === 'white' ? takenPiecesW() : takenPiecesB())">
+                                <li v-for="(piece, i) in (game.playerColor === 'white' ? takenPiecesW() : takenPiecesB())"
+                                    :class="{separator: i > 0 && piece.char !== (game.playerColor === 'white' ? takenPiecesW() : takenPiecesB())[i -1].char}">
                                     <img :src="`assets/${piece.image}.png`" alt="" />
                                 </li>
 
@@ -404,7 +405,8 @@
 
                         <div class="player">
                             <ul class="pieces">
-                                <li v-for="piece in (game.playerColor === 'white' ? takenPiecesB() : takenPiecesW())">
+                                <li v-for="(piece, i) in (game.playerColor === 'white' ? takenPiecesB() : takenPiecesW())"
+                                    :class="{separator: i > 0 && piece.char !== (game.playerColor === 'white' ? takenPiecesB() : takenPiecesW())[i -1].char}">
                                     <img :src="`assets/${piece.image}.png`" alt="" />
                                 </li>
 
