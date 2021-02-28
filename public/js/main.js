@@ -300,8 +300,6 @@ const app = Vue.createApp({
             Stockfish().then(sf => {
                 stockfish = sf;
 
-                this.sendUCI('uci');
-
                 stockfish.addMessageListener(e => {
                     console.log(e);
                     if (/option name /.test(e)) {
@@ -317,9 +315,9 @@ const app = Vue.createApp({
                                 vars,
                             };
                         }
-                    } else if (/uciok/.test(e)) {
+                    } else if (/uciok/gm.test(e)) {
                         this.engine.loaded = true;
-                    } else if (/bestmove/g.test(e)) {
+                    } else if (/bestmove/gm.test(e)) {
                         this.engine.calculating = false;
 
                         if (/bestmove \(none\)/gm.test(e)) {
@@ -341,6 +339,8 @@ const app = Vue.createApp({
                     move?.Score && move?.ScoreEval && (this.scores[this.game.currMove] = {...this.scores[this.game.currMove], score: move.Score === 'mate' ? `#${mult * parseInt(move?.ScoreEval)}` : mult * parseFloat(move.ScoreEval) / 100});
                     move && this.drawBestMove(8 - parseInt(move.I), 'abcdefgh'.indexOf(move.J), 8 - parseInt(move.NewI), 'abcdefgh'.indexOf(move.NewJ), this.game.playerColor);
                 });
+
+                this.sendUCI('uci');
             }).catch(e => this.analysisEnabled = false);
         },
 
