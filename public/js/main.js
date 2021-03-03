@@ -30,10 +30,10 @@ const app = Vue.createApp({
         modal: null,
         page: '',
         connection: {
-            protocol: 'ws',
-            //protocol: 'wss',
-            address: 'localhost:3000',
-            //address: 'chessjs-web.herokuapp.com',
+            //protocol: 'ws',
+            protocol: 'wss',
+            //address: 'localhost:3000',
+            address: 'chessjs-web.herokuapp.com',
             socket: null,
             gameid: null,
             canStart: false,
@@ -303,7 +303,7 @@ const app = Vue.createApp({
 
         sendUCI(uci) {
             if (this.engine.name === 'Stockfish') {
-                stockfish.postMessage(uci);
+                stockfish?.postMessage(uci);
             }
         },
 
@@ -445,6 +445,8 @@ const app = Vue.createApp({
         },
 
         reset() {
+            this.sendUCI('stop');
+
             if (['sp', 'smp', 'mp', 'spec'].includes(this.game.gamemode) && this.game.movements.length > 0) {
                 const games = JSON.parse(localStorage.getItem('gameHistory') ?? '[]');
                 games.push({date: new Date(), won: this.game.won, draw: this.game.draw, gamemode: this.game.gamemode, movements: this.game.movements, result: this.game.result});
