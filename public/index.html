@@ -31,7 +31,30 @@
     <script type="text/javascript" src="js/theme.js"></script>
 
     <div id="app">
-        <div v-if="!engine.loaded" class="loading"></div>
+        <div v-if="!engine.loaded" class="blur-background"></div>
+
+        <div class="modal fade" id="modal" data-backdrop="static" data-keyboard="false"
+             tabindex="-1" aria-labelledby="modal" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title border-0" id="modalTitle">{{ modal?.title }}</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body" v-html="modal?.body"></div>
+                    <div class="modal-footer border-0">
+                        <button v-if="modal?.type === 'confirm'" type="button" @click="modal?.cancelOnClick"
+                                id="btnCancel" class="btn btn-secondary" @click="modal?.onCancel()"
+                                data-dismiss="modal">{{ modal?.closeButton }}</button>
+                        <button type="button" @click="modal?.onClose()"
+                                id="btnClose" class="btn btn-primary"
+                                data-dismiss="modal">{{ modal?.primaryButton }}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div v-if="!game.start" class="mainMenu">
             <header>
@@ -102,6 +125,16 @@
                         <label for="inputTimeInc">Tempo adicional</label>
                         <input id="inputTimeInc" name="timeInc" class="form-control" type="number" step="1" min="0"
                                max="180" v-model.number="game.timeInc" required />
+                    </div>
+
+                    <div v-if="game.gamemode !== 'spec' && game.gamemode !== 'smp' && createGame" class="form-group">
+                        <label for="inputPlayerColor">Jogar de:</label>
+                        <select id="inputPlayerColor" name="playerColor" class="form-control" v-model="game.playerColor"
+                                required>
+                            <option value="white">Brancas</option>
+                            <option value="black">Pretas</option>
+                            <option value="random">Aleatório</option>
+                        </select>
                     </div>
 
                     <button type="button" class="btn btn-secondary mr-3"
@@ -223,7 +256,7 @@
 
                 </div>
 
-                <div class="chessboard-container" :class="{'inverted': game.playerColor === 'black'}"
+                <div class="chessboard-container" :class="{'inverted': invertBoard}"
                      :style="{'--even': config.colorEven, '--odd': config.colorOdd}">
                     <table @mouseup.left="clearAnnotations()" class="chessboard">
                         <tbody>
@@ -342,6 +375,9 @@
                               :x1="scores[game.currMove]?.bestMove.x1" :y1="scores[game.currMove]?.bestMove.y1"
                               :x2="scores[game.currMove]?.bestMove.x2" :y2="scores[game.currMove]?.bestMove.y2">
                     </svg>
+
+                    <div v-if="['spec', 'analysis'].includes(game.gamemode)" class="analysisBar"
+                         :style="{'--percentage': percentage + '%'}"></div>
                 </div>
 
                 <div class="sidebar-right">
@@ -371,7 +407,7 @@
                                 <span></span>
                                 <span>{{ game.playerNames[game.playerColor === 'white' ? 'black' : 'white'] }}</span>
                                 <span class="timer">
-                                    {{ parseS(game.timePlayer * 60 -{white: game.player2Timer, black: game.player1Timer}[game.playerColor]) }}
+                                    {{ parseS((game.timePlayer * 60 * 100 - {white: game.player2Timer, black: game.player1Timer}[game.playerColor]) / 100) }}
                                 </span>
                             </div>
 
@@ -417,20 +453,26 @@
                                 <span></span>
                                 <span>{{ game.playerNames[game.playerColor] }}</span>
                                 <span class="timer">
-                                    {{ parseS(game.timePlayer * 60 - {white: game.player1Timer, black: game.player2Timer}[game.playerColor]) }}
+                                    {{ parseS((game.timePlayer * 60 * 100 - {white: game.player1Timer, black: game.player2Timer}[game.playerColor]) / 100) }}
                                 </span>
                             </div>
                         </div>
                     </div>
 
-                    <div v-if="['sp', 'smp', 'mp'].includes(game.gamemode)" class="controls">
-                        <i v-if="game.fen.length > 1 && (game.gamemode === 'smp' || game.currPlayer !== game.playerColor)"
-                           class="fa fa-undo"
-                           @click="requestUndo()"
-                           title="Voltar jogada"></i>
-                        <i class="fa fa-flag" @click="requestForfeit()" title="Desistir"></i>
-                        <i v-if="game.canRequestDraw" class="fa fa-handshake-o" @click="requestDraw()"
-                           title="Empate"></i>
+                    <div class="controls-div">
+                        <div class="controls controls-left">
+                            <i class="fa fa-bars" @click="reset()" title="Voltar para o menu"></i>
+                            <i class="fa fa-refresh" @click="invertBoard = !invertBoard" title="Inverter tabuleiro"></i>
+                        </div>
+
+                        <div v-if="['sp', 'smp', 'mp'].includes(game.gamemode) && !game.result"
+                             class="controls controls-right">
+                            <i v-if="game.fen.length > 1 && (game.gamemode === 'smp' || game.currPlayer !== game.playerColor) && game.lastRequestUndo !== game.currPlayer"
+                               class="fa fa-undo" @click="requestUndo()" title="Voltar jogada"></i>
+                            <i class="fa fa-flag" @click="requestForfeit()" title="Desistir"></i>
+                            <i v-if="game.currPlayer === game.playerColor && game.lastRequestDraw !== game.currPlayer"
+                               class="fa fa-handshake-o" @click="requestDraw()" title="Empate"></i>
+                        </div>
                     </div>
                 </div>
             </div>

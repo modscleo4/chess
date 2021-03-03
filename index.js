@@ -6,9 +6,8 @@ import * as Chess from './public/js/chess.js';
 
 const port = parseInt(process.env.PORT || '3000');
 
-const server = express()
-    .use(compression({filter: shouldCompress}))
-    .use((request, response, next) => {
+const options = {
+    setHeaders(response, path) {
         response.set('Access-Control-Allow-Origin', ['*']);
         response.set('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE');
         response.set('Access-Control-Allow-Headers', 'Content-Type');
@@ -16,11 +15,13 @@ const server = express()
         response.set('Expires', new Date(Date.now() + 1000 * 600).toUTCString());
         response.set('Cross-Origin-Opener-Policy', 'same-origin');
         response.set('Cross-Origin-Embedder-Policy', 'require-corp');
+    }
+};
 
-        next();
-    })
-    .use('/node_modules/', express.static('node_modules/'))
-    .use('/', express.static('public/'))
+const server = express()
+    .use(compression({level: 1, filter: shouldCompress}))
+    .use('/node_modules/', express.static('node_modules/', options))
+    .use('/', express.static('public/', options))
     .listen(port);
 
 function shouldCompress(request, response) {
@@ -69,6 +70,9 @@ function randomString(n = 64) {
  * @property {NodeJS.Timeout | null} player2TimerFn
  * @property {string} player2Color
  * @property {string | null} player2Secret
+ *
+ * @property {Chess.PlayerColor | null} lastRequestUndo
+ * @property {Chess.PlayerColor | null} lastRequestDraw
  *
  * @property {Chess.PlayerColor} currPlayer
  * @property {Chess.Piece | null} lastMoved
@@ -122,11 +126,9 @@ function boardAt(game, n) {
 
     regenerateArray(game, game.fen[n]);
 
-    const {i, j, newI, newJ, promoteTo} = Chess.pgnToCoord(game.movements[n], game.board, game.currPlayer, game.lastMoved);
+    const {i, j, newI, newJ} = Chess.pgnToCoord(game.movements[n], game.board, game.currPlayer, game.lastMoved);
     game.currentMove = [{i, j, newI, newJ}];
     game.currMove = n;
-
-    game.promoteTo = promoteTo;
 }
 
 const commands = {
@@ -134,15 +136,16 @@ const commands = {
      *
      * @param {WebSocket} socket
      * @param {Object} data
+     * @param {Chess.PlayerColor} data.playerColor
      * @param {number} data.timePlayer
      * @param {number} data.timeInc
      * @param {string} data.playerName
      */
-    createGame: async (socket, {timePlayer, timeInc, playerName}) => {
+    createGame: async (socket, {playerColor, timePlayer, timeInc, playerName}) => {
         timePlayer === -1 && (timePlayer = Infinity);
 
         let gameid;
-        while (games.has(gameid = Math.random().toString().replace('.', '')));
+        while (games.has(gameid = (Math.random() * 10).toString().replace('.', '')));
 
         /**
          * @type {Game}
@@ -156,21 +159,24 @@ const commands = {
 
             board: Chess.generateArray(),
 
-            player1: socket,
-            player1Name: playerName,
-            player1Connected: true,
+            player1: (playerColor === 'white' && socket) || null,
+            player1Name: (playerColor === 'white' && playerName) || '',
+            player1Connected: (playerColor === 'white' && true) || false,
             player1Timer: 0,
             player1TimerFn: null,
             player1Color: 'white',
-            player1Secret: randomString(),
+            player1Secret: (playerColor === 'white' && randomString()) || null,
 
-            player2: null,
-            player2Name: '',
-            player2Connected: false,
+            player2: (playerColor === 'black' && socket) || null,
+            player2Name: (playerColor === 'black' && playerName) || '',
+            player2Connected: (playerColor === 'black' && true) || false,
             player2Timer: 0,
             player2TimerFn: null,
             player2Color: 'black',
-            player2Secret: null,
+            player2Secret: (playerColor === 'black' && randomString()) || null,
+
+            lastRequestUndo: null,
+            lastRequestDraw: null,
 
             currPlayer: 'white',
             lastMoved: null,
@@ -473,21 +479,35 @@ const commands = {
             if (game.currPlayer === 'white') {
                 game.player1TimerFn = setInterval(() => {
                     game.player1Timer++;
-                    if (game.player1Timer >= game.timePlayer * 60) {
+                    if (game.player1Timer >= game.timePlayer * 60 * 100) {
+                        if (Chess.semiInsufficientMaterial(game.board, 'black')) {
+                            game.won = null;
+                            game.result = '½-½';
+
+                            return;
+                        }
+
                         game.won = 'black';
                         game.result = '0–1';
                     }
-                }, 1000);
+                }, 10);
 
                 game.movements.length > 2 && (game.player1Timer -= game.timeInc);
             } else {
                 game.player2TimerFn = setInterval(() => {
                     game.player2Timer++;
-                    if (game.player2Timer >= game.timePlayer * 60) {
+                    if (game.player2Timer >= game.timePlayer * 60 * 100) {
+                        if (Chess.semiInsufficientMaterial(game.board, 'white')) {
+                            game.won = null;
+                            game.result = '½-½';
+
+                            return;
+                        }
+
                         game.won = 'white';
                         game.result = '1–0';
                     }
-                }, 1000);
+                }, 10);
 
                 game.movements.length > 2 && (game.player1Timer -= game.timeInc);
             }
@@ -544,6 +564,12 @@ const commands = {
             return;
         }
 
+        if (game.lastRequestUndo === game.currPlayer) {
+            return;
+        }
+
+        game.lastRequestUndo = game.currPlayer;
+
         if (game.player1 === socket) {
             game.player2?.send(JSON.stringify({
                 command: 'requestUndo',
@@ -556,11 +582,13 @@ const commands = {
     },
 
     approveUndo: async (socket) => {
+        console.log(socket);
         const game = games.get(socket.gameid);
         if (!game) {
             return;
         }
 
+        console.log(game.fen[game.currMove - 1]);
         boardAt(game, game.currMove - 1);
         game.movements.pop();
         game.fen.pop();
@@ -624,6 +652,12 @@ const commands = {
         }
 
         if (reason === 'requested') {
+            if (game.lastRequestDraw === game.currPlayer) {
+                return;
+            }
+
+            game.lastRequestDraw = game.currPlayer;
+
             if (game.player1 === socket) {
                 game.player2?.send(JSON.stringify({
                     command: 'requestDraw',

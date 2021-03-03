@@ -289,6 +289,18 @@ export function isStaleMate(color, board, lastMoved) {
 }
 
 /**
+ *
+ * @param {(Piece | null)[][]} board
+ * @param {PlayerColor} playerColor
+ */
+export function semiInsufficientMaterial(board, playerColor) {
+    const pieces = board.flat().filter(p => p?.color === playerColor);
+
+    // For (real) insufficient material, You can only have 2 pieces, and no Rook, Queen, or Pawn
+    return !pieces.find(p => p.char === 'R') && !pieces.find(p => p.char === 'Q') && !pieces.find(p => p.char === 'P') && pieces.length <= 2;
+}
+
+/**
  * @param {(Piece | null)[][]} board
  * @return {boolean}
  */
@@ -296,40 +308,12 @@ export function insufficientMaterial(board) {
     const whitePieces = board.flat().filter(p => p?.color === 'white');
     const blackPieces = board.flat().filter(p => p?.color === 'black');
 
-    if (!whitePieces.find(p => p.char === 'R') && !whitePieces.find(p => p.char === 'Q') && !whitePieces.find(p => p.char === 'P')
-        && !blackPieces.find(p => p.char === 'R') && !blackPieces.find(p => p.char === 'Q') && !blackPieces.find(p => p.char === 'P')) {
-
-
-        if (!whitePieces.find(p => p.char === 'N') && !whitePieces.find(p => p.char === 'B')) {
-            if (!blackPieces.find(p => p.char === 'N') && !blackPieces.find(p => p.char === 'B')) {
-                // King vs King
-            }
-
-            if (!blackPieces.find(p => p.char === 'N') && blackPieces.find(p => p.char === 'B')) {
-                // King vs King + Bishop
-                return true;
-            }
-
-            if (blackPieces.find(p => p.char === 'N') && !blackPieces.find(p => p.char === 'B')) {
-                // King vs King + Knight
-                return true;
-            }
-        } else if (!blackPieces.find(p => p.char === 'N') && !blackPieces.find(p => p.char === 'B')) {
-            if (!whitePieces.find(p => p.char === 'N') && whitePieces.find(p => p.char === 'B')) {
-                // King vs King + Bishop
-                return true;
-            }
-
-            if (whitePieces.find(p => p.char === 'N') && !whitePieces.find(p => p.char === 'B')) {
-                // King vs King + Knight
-                return true;
-            }
-        } else if (!whitePieces.find(p => p.char === 'N') && !blackPieces.find(p => p.char === 'N')
-            && whitePieces.find(p => p.char === 'B') && blackPieces.find(p => p.char === 'B')
-            && whitePieces.find(p => p.char === 'B')?.posColor === blackPieces.find(p => p.char === 'B')?.posColor) {
-            // King + Bishop vs King + Bishop (same color)
-            return true;
+    if (semiInsufficientMaterial(board, 'white') && semiInsufficientMaterial(board, 'black')) {
+        if (whitePieces.find(p => p.char === 'B') && blackPieces.find(p => p.char === 'B')) {
+            return whitePieces.find(p => p.char === 'B')?.posColor === blackPieces.find(p => p.char === 'B')?.posColor;
         }
+
+        return true;
     }
 
     return false;

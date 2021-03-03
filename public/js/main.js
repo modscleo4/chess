@@ -27,12 +27,13 @@ let stockfish;
 
 const app = Vue.createApp({
     data: () => ({
-        page: '/',
+        modal: null,
+        page: '',
         connection: {
-            //protocol: 'ws',
-            protocol: 'wss',
-            //address: 'localhost:3000',
-            address: 'chessjs-web.herokuapp.com',
+            protocol: 'ws',
+            //protocol: 'wss',
+            address: 'localhost:3000',
+            //address: 'chessjs-web.herokuapp.com',
             socket: null,
             gameid: null,
             canStart: false,
@@ -62,9 +63,11 @@ const app = Vue.createApp({
             player1TimerFn: null,
             player2Timer: 0,
             player2TimerFn: null,
-            canRequestDraw: true,
+            lastRequestUndo: null,
+            lastRequestDraw: null,
             currMove: -1,
         },
+        invertBoard: false,
         scores: [],
         validMoves: [],
         selectVariant: false,
@@ -97,7 +100,9 @@ const app = Vue.createApp({
             },
             loaded: false,
             calculating: false,
+            ignore: false,
         },
+        percentage: 50,
         maxThreads: navigator.hardwareConcurrency,
         maxRAM: Math.min(Math.floor((performance.memory?.jsHeapSizeLimit ?? 32 * 1024 * 1024) / 1024 / 1024), 1024),
         analysisEnabled: true,
@@ -228,6 +233,38 @@ const app = Vue.createApp({
     },
 
     methods: {
+        openModal({type, title, body, primaryButton, closeButton = 'Fechar', onClose = () => { }, onCancel = () => { }}) {
+            let interval;
+
+            const open = () => {
+                interval !== undefined && clearInterval(interval);
+
+                this.modal = {
+                    type,
+                    title,
+                    body,
+                    primaryButton,
+                    closeButton,
+                    onClose,
+                    onCancel,
+                };
+
+                jQuery('#modal').modal('show').on('hidden.bs.modal', () => {
+                    this.modal = null;
+                });
+            };
+
+            interval = setInterval(() => !this.modal && open(), 100);
+        },
+
+        alert(body, title = 'Alerta', onClose = () => { }) {
+            this.openModal({type: 'alert', title, body, primaryButton: 'OK', onClose});
+        },
+
+        confirm(body, title = 'Confirmação', onClose = () => { }, onCancel = () => { }) {
+            this.openModal({type: 'confirm', title, body, primaryButton: 'Sim', closeButton: 'Não', onClose, onCancel});
+        },
+
         matchHistory() {
             const matchHistory = JSON.parse(localStorage.getItem('gameHistory'));
             return matchHistory;
@@ -271,22 +308,27 @@ const app = Vue.createApp({
         },
 
         sendToEngine(move = false) {
+            this.sendUCI('stop');
+
             if (this.scores[this.game.currMove]?.d === this.config.depth) {
                 this.currDepth = this.scores[this.game.currMove]?.d;
+
+                if (this.scores[this.game.currMove]) {
+                    this.updatePercentage();
+                }
+
                 return;
             }
 
-            if (this.engine.name === 'Stockfish') {
-                this.sendUCI('stop');
+            this.engine.ignore = false;
 
+            if (this.engine.name === 'Stockfish') {
                 if (move) {
                     this.engine.calculating = true;
                 }
 
-                setTimeout(() => {
-                    this.sendUCI(`position fen "${this.game.fen[this.game.currMove + 1]}"`);
-                    this.sendUCI(`go move time ${move ? this.game.player2Timer : 30000} depth ${this.config.depth}`);
-                }, 100);
+                this.sendUCI(`position fen "${this.game.fen[this.game.currMove + 1]}"`);
+                this.sendUCI(`go move time ${move ? (this.game.playerColor === 'white' ? this.game.player2Timer : this.game.player1Timer) : 30000} depth ${this.config.depth}`);
                 return;
             }
 
@@ -317,11 +359,19 @@ const app = Vue.createApp({
                         }
                     } else if (/uciok/gm.test(e)) {
                         this.engine.loaded = true;
-                    } else if (/bestmove/gm.test(e)) {
+                    }
+
+                    if (this.engine.ignore) {
+                        return;
+                    }
+
+                    if (/bestmove/gm.test(e)) {
                         this.engine.calculating = false;
 
                         if (/bestmove \(none\)/gm.test(e)) {
                             this.scores[this.game.currMove] = undefined;
+
+                            this.percentage = '50';
                             return;
                         }
                     }
@@ -338,10 +388,26 @@ const app = Vue.createApp({
                     move?.Score && (this.scores[this.game.currMove] = {d: this.currDepth, bestMove: null});
                     move?.Score && move?.ScoreEval && (this.scores[this.game.currMove] = {...this.scores[this.game.currMove], score: move.Score === 'mate' ? `#${mult * parseInt(move?.ScoreEval)}` : mult * parseFloat(move.ScoreEval) / 100});
                     move && this.drawBestMove(8 - parseInt(move.I), 'abcdefgh'.indexOf(move.J), 8 - parseInt(move.NewI), 'abcdefgh'.indexOf(move.NewJ), this.game.playerColor);
+
+                    if (this.scores[this.game.currMove]) {
+                        this.updatePercentage();
+                    }
                 });
 
                 this.sendUCI('uci');
             }).catch(e => this.analysisEnabled = false);
+        },
+
+        updatePercentage() {
+            const scoreString = this.scores[this.game.currMove].score.toString();
+            const score = parseFloat(scoreString.startsWith('#-') ? '-200' : scoreString.startsWith('#') ? '200' : scoreString);
+
+            const m = (0 - 100) / (-200 - 200);
+            function f(x) {
+                return m * (x - (-200)) + 0;
+            }
+
+            this.percentage = f(score);
         },
 
         scrollToResult() {
@@ -357,7 +423,7 @@ const app = Vue.createApp({
          * @return {string}
          */
         movementsToPGN(movements, result) {
-            return movements.reduce((acc, m, i) => acc + (i % 2 == 0 ? `${i / 2 + 1}. ${m}` : ` ${m} `), '') + ` ${result}`;
+            return movements.reduce((acc, m, i) => acc + (i % 2 == 0 ? `${i / 2 + 1}. ${m}` : ` ${m} `), '') + ` ${result ?? ''}`;
         },
 
         /**
@@ -379,7 +445,7 @@ const app = Vue.createApp({
         },
 
         reset() {
-            if (this.game.movements.length > 0) {
+            if (['sp', 'smp', 'mp', 'spec'].includes(this.game.gamemode) && this.game.movements.length > 0) {
                 const games = JSON.parse(localStorage.getItem('gameHistory') ?? '[]');
                 games.push({date: new Date(), won: this.game.won, draw: this.game.draw, gamemode: this.game.gamemode, movements: this.game.movements, result: this.game.result});
 
@@ -404,6 +470,8 @@ const app = Vue.createApp({
             this.game.player1TimerFn = null;
             this.game.player2Timer = 0;
             this.game.player2TimerFn = null;
+            this.game.lastRequestUndo = null;
+            this.game.lastRequestDraw = null;
             this.game.lastMoved = null;
             this.game.takenPieces = [];
             this.game.movements = [];
@@ -414,6 +482,7 @@ const app = Vue.createApp({
             this.game.canRequestDraw = true;
             this.game.currMove = -1;
 
+            this.invertBoard = false;
             this.scores = [];
             this.validMoves = [];
             this.selectVariant = false;
@@ -431,34 +500,41 @@ const app = Vue.createApp({
 
         startGame() {
             if (!this.config.engineElo || this.config.engineElo < 100 || this.config.engineElo > 3200) {
-                alert('Preencha um valor válido entre 100 e 3200');
+                this.alert('Preencha um valor válido entre 100 e 3200');
                 document.querySelector('#inputEngineElo')?.focus();
 
                 return;
             }
 
             if (!this.game.timePlayer || this.game.timePlayer <= 0 && this.game.timePlayer !== -1 || this.game.timePlayer > 180) {
-                alert('Preencha um valor válido entre 1 e 180');
+                this.alert('Preencha um valor válido entre 1 e 180');
                 document.querySelector('#inputTimePlayer')?.focus();
 
                 return;
             }
 
             if (!this.game.timePlayer || this.game.timeInc < 0 || this.game.timeInc > 180) {
-                alert('Preencha um valor válido entre 0 e 180');
+                this.alert('Preencha um valor válido entre 0 e 180');
                 document.querySelector('#inputTimeInc')?.focus();
 
                 return;
             }
+
+            if (this.game.playerColor === 'random') {
+                this.game.playerColor = Math.random() > 0.5 ? 'black' : 'white';
+            }
+
+            this.invertBoard = this.game.playerColor === 'black';
 
             this.allowLogin = true;
 
             this.game.timePlayer === -1 && (this.game.timePlayer = Infinity);
             ['mp', 'spec'].includes(this.game.gamemode) && this.loginServer();
 
-            this.sendUCI(`setoption name Threads value ${this.config.threads}`);
-            this.sendUCI(`setoption name Hash value ${this.config.hash}`);
+            !['smp', 'mp', 'settings'].includes(this.game.gamemode) && this.sendUCI(`setoption name Threads value ${this.config.threads}`);
+            !['smp', 'mp', 'settings'].includes(this.game.gamemode) && this.sendUCI(`setoption name Hash value ${this.config.hash}`);
             ['sp'].includes(this.game.gamemode) && this.sendUCI(`setoption name UCI_Elo value ${this.config.engineElo}`) && this.sendUCI('setoption name UCI_AnalyseMode value false');
+            ['sp'].includes(this.game.gamemode) && this.game.playerColor === 'black' && this.sendToEngine(true);
             ['spec', 'analysis'].includes(this.game.gamemode) && this.sendUCI(`setoption name UCI_Elo value ${this.engine.options['UCI_Elo'].max}`) && this.sendUCI('setoption name UCI_AnalyseMode value true');
 
             this.game.start = true;
@@ -490,6 +566,9 @@ const app = Vue.createApp({
             if (n < -1 || n > this.game.movements.length - 1) {
                 return;
             }
+
+            this.sendUCI('stop');
+            this.engine.ignore = true;
 
             if (['sp', 'smp', 'mp', 'spec'].includes(this.game.gamemode) && !this.game._board && !override) {
                 this.game._board = this.game.board.map(r => [...r]);
@@ -585,6 +664,8 @@ const app = Vue.createApp({
                     this.game.player2Timer = player2Timer;
                     localStorage.setItem('playerSecret', secret);
 
+                    this.invertBoard = this.game.playerColor === 'black';
+
                     if (this.analyze && ['spec'].includes(this.game.gamemode)) {
                         this.sendToEngine();
                     }
@@ -600,7 +681,7 @@ const app = Vue.createApp({
                 gameNotFound: async (message) => {
                     const {gameid} = message;
 
-                    alert(`Jogo ${gameid} não encontrado.`);
+                    this.alert(`Jogo ${gameid} não encontrado.`);
                     this.reset();
                     this.connection.secret = null;
                     localStorage.removeItem('playerSecret');
@@ -609,7 +690,7 @@ const app = Vue.createApp({
                 gameFull: async (message) => {
                     const {gameid} = message;
 
-                    alert(`O jogo ${gameid} está cheio.`);
+                    this.alert(`O jogo ${gameid} está cheio.`);
                     this.reset();
                     this.connection.secret = null;
                     localStorage.removeItem('playerSecret');
@@ -618,7 +699,7 @@ const app = Vue.createApp({
                 alreadyConnected: async (message) => {
                     const {gameid} = message;
 
-                    alert(`Você já está no jogo ${gameid}.`);
+                    this.alert(`Você já está no jogo ${gameid}.`);
                     this.reset();
                 },
 
@@ -627,9 +708,13 @@ const app = Vue.createApp({
                 },
 
                 requestUndo: async (message) => {
-                    this.connection.socket.send(JSON.stringify({
-                        command: confirm('Voltar jogada?') ? 'approveUndo' : 'rejectUndo',
-                    }));
+                    this.game.lastRequestUndo = this.game.currPlayer;
+
+                    this.confirm('Seu oponente deseja voltar a jogada', 'Voltar jogada?', () => this.connection.socket.send(JSON.stringify({
+                        command: 'approveUndo',
+                    })), () => this.connection.socket.send(JSON.stringify({
+                        command: 'rejectUndo',
+                    })));
                 },
 
                 undo: async (message) => {
@@ -643,9 +728,13 @@ const app = Vue.createApp({
                 },
 
                 requestDraw: async (message) => {
-                    this.connection.socket.send(JSON.stringify({
-                        command: confirm('Empatar?') ? 'approveDraw' : 'rejectDraw',
-                    }));
+                    this.game.lastRequestDraw = this.game.currPlayer;
+
+                    this.confirm('Seu oponente solicitou um empate', 'Empatar?', () => this.connection.socket.send(JSON.stringify({
+                        command: 'approveDraw',
+                    })), () => this.connection.socket.send(JSON.stringify({
+                        command: 'rejectDraw',
+                    })));
                 },
 
                 draw: async (message) => {
@@ -674,6 +763,7 @@ const app = Vue.createApp({
             if (!this.connection.gameid) {
                 socket.send(JSON.stringify({
                     command: 'createGame',
+                    playerColor: this.game.playerColor,
                     playerName: this.playerName,
                     timePlayer: this.game.timePlayer === Infinity ? -1 : this.game.timePlayer,
                     timeInc: this.game.timeInc,
@@ -696,6 +786,8 @@ const app = Vue.createApp({
         undo() {
             this.sendUCI('stop');
 
+            this.lastRequestUndo = null;
+
             this.boardAt(this.game.currMove - 1, true);
             this.game.movements.pop();
             this.game.fen.pop();
@@ -706,14 +798,14 @@ const app = Vue.createApp({
             this.sendUCI('stop');
 
             if (won === 'black') {
-                this.result('Pretas venceram', 'desistência');
+                this.result('Pretas venceram', 'Desistência');
 
                 this.game.result = '0-1';
 
                 this.game.won = 'black';
                 this.game.draw = false;
             } else {
-                this.result('Brancas venceram', 'desistência');
+                this.result('Brancas venceram', 'Desistência');
 
                 this.game.result = '1-0';
 
@@ -725,7 +817,9 @@ const app = Vue.createApp({
         draw() {
             this.sendUCI('stop');
 
-            this.result('Empate', 'solicitado');
+            this.lastRequestDraw = null;
+
+            this.result('Empate', 'Solicitado');
 
             this.game.result = '½-½';
 
@@ -1056,6 +1150,7 @@ const app = Vue.createApp({
 
             if (this.game.gamemode === 'smp') {
                 this.game.playerColor = this.game.currPlayer;
+                this.invertBoard = this.game.playerColor === 'black';
             }
 
             this.game.lastMoved = piece;
@@ -1078,31 +1173,49 @@ const app = Vue.createApp({
                 if (this.game.currPlayer === 'white') {
                     this.game.player1TimerFn = setInterval(() => {
                         this.game.player1Timer++;
-                        if (this.game.player1Timer >= this.game.timePlayer * 60) {
-                            this.result('Pretas venceram', 'tempo esgotado');
+                        if (this.game.player1Timer >= this.game.timePlayer * 60 * 100) {
+                            if (Chess.semiInsufficientMaterial(this.game.board, 'black')) {
+                                this.result('Empate', 'Tempo esgotado + material insuficiente');
+
+                                this.game.won = null;
+                                this.game.result = '½-½';
+
+                                return;
+                            }
+
+                            this.result('Pretas venceram', 'Tempo esgotado');
 
                             this.game.won = 'black';
                             this.game.result = '0–1';
                         }
-                    }, 1000);
+                    }, 10);
 
                     this.game.movements.length > 2 && (this.game.player2Timer -= this.game.timeInc);
                 } else {
                     this.game.player2TimerFn = setInterval(() => {
                         this.game.player2Timer++;
-                        if (this.game.player2Timer >= this.game.timePlayer * 60) {
-                            this.result('Brancas venceram', 'tempo esgotado');
+                        if (this.game.player2Timer >= this.game.timePlayer * 60 * 100) {
+                            if (Chess.semiInsufficientMaterial(this.game.board, 'white')) {
+                                this.result('Empate', 'Tempo esgotado + material insuficiente');
+
+                                this.game.won = null;
+                                this.game.result = '½-½';
+
+                                return;
+                            }
+
+                            this.result('Brancas venceram', 'Tempo esgotado');
 
                             this.game.won = 'white';
                             this.game.result = '1–0';
                         }
-                    }, 1000);
+                    }, 10);
 
                     this.game.movements.length > 2 && (this.game.player1Timer -= this.game.timeInc);
                 }
             }
 
-            if (['sp'].includes(this.game.gamemode) && this.game.currPlayer === 'black') {
+            if (['sp'].includes(this.game.gamemode) && this.game.currPlayer !== this.game.playerColor) {
                 this.sendToEngine(true);
             }
 
@@ -1151,62 +1264,61 @@ const app = Vue.createApp({
          * @param {string} reason
          */
         result(result, reason) {
-            setTimeout(() => {
-                alert(`${result} (${reason})`);
-                this.reset();
-            }, 500);
+            this.alert(reason, result, () => {this.reset();});
         },
 
         requestUndo() {
-            if (!confirm('Soliciar voltar jogada?')) {
+            if (this.game.lastRequestUndo === this.game.currPlayer) {
                 return;
             }
 
-            if (this.connection.socket) {
-                this.connection.socket.send(JSON.stringify({
-                    command: 'requestUndo',
-                }));
-            }
+            this.confirm('Deseja solicitar voltar a jogada?', 'Solicitar voltar jogada', () => {
+                this.game.lastRequestUndo = this.game.currPlayer;
 
-            if (['sp', 'smp'].includes(this.game.gamemode)) {
-                this.undo();
-            }
+                if (this.connection.socket) {
+                    this.connection.socket.send(JSON.stringify({
+                        command: 'requestUndo',
+                    }));
+                }
+
+                if (['sp', 'smp'].includes(this.game.gamemode)) {
+                    this.undo();
+                }
+            });
         },
 
         requestForfeit() {
-            if (!confirm('Desistir?')) {
-                return;
-            }
+            this.confirm('Deseja abandonar a partida?', 'Desistir', () => {
+                if (this.connection.socket) {
+                    this.connection.socket.send(JSON.stringify({
+                        command: 'forfeit',
+                    }));
+                }
 
-            if (this.connection.socket) {
-                this.connection.socket.send(JSON.stringify({
-                    command: 'forfeit',
-                }));
-            }
-
-            if (['sp', 'smp'].includes(this.game.gamemode)) {
-                this.forfeit(this.game.currPlayer === 'white' ? 'black' : 'white');
-            }
+                if (['sp', 'smp'].includes(this.game.gamemode)) {
+                    this.forfeit(this.game.currPlayer === 'white' ? 'black' : 'white');
+                }
+            });
         },
 
         requestDraw() {
-            if (!this.game.canRequestDraw) {
+            if (this.game.lastRequestDraw === this.game.currPlayer) {
                 return;
             }
 
-            if (!confirm('Solicitar empate?')) {
-                return;
-            }
+            this.confirm('Deseja solicitar empate?', 'Solicitar empate', () => {
+                this.game.lastRequestDraw = this.game.currPlayer;
 
-            if (this.connection.socket) {
-                this.connection.socket.send(JSON.stringify({
-                    command: 'requestDraw',
-                }));
-            }
+                if (this.connection.socket) {
+                    this.connection.socket.send(JSON.stringify({
+                        command: 'requestDraw',
+                    }));
+                }
 
-            if (['sp', 'smp'].includes(this.game.gamemode)) {
-                this.draw();
-            }
+                if (['sp', 'smp'].includes(this.game.gamemode)) {
+                    this.draw();
+                }
+            });
         },
 
         isPieceMove(i, j, newI, newJ) {
@@ -1221,7 +1333,7 @@ const app = Vue.createApp({
             this.alt = alt;
 
             let cell;
-            if (this.game.playerColor === 'white') {
+            if (!this.invertBoard) {
                 cell = document.querySelector(`#cell_${i}_${j}`)?.getBoundingClientRect();
             } else {
                 cell = document.querySelector(`#cell_${7 - i}_${7 - j}`)?.getBoundingClientRect();
@@ -1247,7 +1359,7 @@ const app = Vue.createApp({
             }
 
             let cell;
-            if (this.game.playerColor === 'white') {
+            if (!this.invertBoard) {
                 cell = document.querySelector(`#cell_${i}_${j}`)?.getBoundingClientRect();
             } else {
                 cell = document.querySelector(`#cell_${7 - i}_${7 - j}`)?.getBoundingClientRect();
@@ -1272,7 +1384,7 @@ const app = Vue.createApp({
             this.annotationPreview = null;
 
             let cell;
-            if (this.game.playerColor === 'white') {
+            if (!this.invertBoard) {
                 cell = document.querySelector(`#cell_${i}_${j}`)?.getBoundingClientRect();
             } else {
                 cell = document.querySelector(`#cell_${7 - i}_${7 - j}`)?.getBoundingClientRect();
