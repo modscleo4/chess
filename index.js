@@ -19,7 +19,7 @@ const options = {
 };
 
 const server = express()
-    .use(compression({level: 1, filter: shouldCompress}))
+    //.use(compression({level: 1, filter: shouldCompress}))
     .use('/node_modules/', express.static('node_modules/', options))
     .use('/', express.static('public/', options))
     .listen(port);
