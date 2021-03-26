@@ -4,6 +4,7 @@
     --bg-gradient-end: rgb(35, 35, 35);
     --card-color: rgb(19, 19, 19);
     --body-color: rgb(147, 132, 212);
+    --bg-img: url('../assets/bgD.svg');
 
     --text-color: rgba(220, 220, 220, 1);
     --text-color-hover: rgb(141, 128, 194);
@@ -49,6 +50,7 @@
         --bg-gradient-end: rgb(35, 35, 35);
         --card-color: rgb(19, 19, 19);
         --body-color: rgb(147, 132, 212);
+        --bg-img: url('../assets/bgD.svg');
 
         --text-color: rgba(220, 220, 220, 1);
         --text-color-hover: rgb(141, 128, 194);

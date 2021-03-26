@@ -1,0 +1,227 @@
+
+.chessboard-container {
+    position: relative;
+    transition: all var(--board-rotate-time) ease;
+    box-shadow: 2px 2px 10px 0 rgb(16, 16, 16);
+}
+
+.chessboard-container table.chessboard {
+    font-family: monospace;
+    user-select: none;
+    font-size: 19px;
+}
+
+.chessboard-container.inverted {
+    transform: rotate(180deg);
+    box-shadow:  -2px -2px 10px 0 rgb(16, 16, 16);
+}
+
+.chessboard-container.inverted tr td img {
+    transform: rotate(-180deg);
+}
+
+.chessboard-container.inverted tr td .file,
+.chessboard-container.inverted tr td .rank {
+    transform: rotate(-180deg);
+}
+
+.chessboard-container table.chessboard tr td {
+    width: 4em;
+    height: 4em;
+    position: relative;
+}
+
+.chessboard-container table.chessboard tr td.clickable {
+    cursor: grab;
+}
+
+.chessboard-container table.chessboard tr td .file,
+.chessboard-container table.chessboard tr td .rank {
+    position: absolute;
+    padding: 0;
+    margin: 0;
+    font-size: 0.9rem;
+    transition: all var(--board-rotate-time) ease;
+    text-shadow: 1px 1px 12px black;
+}
+
+.chessboard-container table.chessboard tr td .file {
+    bottom: -2px;
+    left: 2px;
+}
+
+.chessboard-container table.chessboard tr td .rank {
+    top: -2px;
+    right: 2px;
+}
+
+.chessboard-container table.chessboard tr td img {
+    pointer-events: none;
+    transition: all var(--board-rotate-time) ease;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: auto;
+    max-height: 90%;
+}
+
+.chessboard-container table.chessboard tr td.clickable img {
+    pointer-events: unset;
+}
+
+.chessboard-container table.chessboard tr td.moving img {
+    opacity: 0.1;
+}
+
+.chessboard-container table.chessboard tr:nth-child(even) td:nth-child(even) {
+    background-color: var(--even);
+    color: var(--odd);
+}
+
+.chessboard-container table.chessboard tr:nth-child(even) td:nth-child(odd) {
+    background-color: var(--odd);
+    color: var(--even);
+}
+
+.chessboard-container table.chessboard tr:nth-child(odd) td:nth-child(even) {
+    background-color: var(--odd);
+    color: var(--even);
+}
+
+.chessboard-container table.chessboard tr:nth-child(odd) td:nth-child(odd) {
+    background-color: var(--even);
+    color: var(--odd);
+}
+
+.chessboard-container table.chessboard tr td::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: auto;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.chessboard-container table.chessboard tr td.validMove:hover {
+    cursor: pointer;
+}
+
+.chessboard-container table.chessboard tr td.validMove::before {
+    width: 50%;
+    height: 50%;
+    border-radius: 50%;
+    background-color: rgba(16, 83, 138, 0.45);
+}
+
+.chessboard-container table.chessboard tr td.validMove.hasPiece::before {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    background: radial-gradient(transparent 0%, transparent 79%, rgba(33, 147, 240, 0.45) 80%);
+}
+
+.chessboard-container table.chessboard tr td.moved::before {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    background-color: rgba(44, 204, 151, 0.50) !important;
+}
+
+.chessboard-container table.chessboard tr td.checked::before {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    background-color: rgba(212, 0, 0, 0.50) !important;
+}
+
+.chessboard-container table.chessboard tr td.validMove:hover::before,
+.chessboard-container table.chessboard tr td.validMove.hover::before/*,
+.chessboard-container table.chessboard tr td.validMove:active-drop-target::before*/ {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    background-color: rgba(33, 147, 240, 0.67) !important;
+}
+
+.chessboard-container .annotations {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: auto;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0.75;
+}
+
+.chessboard-container .analysisBar {
+    content: ' ';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: -16px;
+    width: 12px;
+    --percentage: 50%;
+    --white: rgb(212, 212, 212);
+    --black: rgb(64, 64, 64);
+    background-color: var(--black);
+}
+
+.chessboard-container .analysisBar::before {
+    content: ' ';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--white);
+    height: var(--percentage);
+    transition: all 100ms ease;
+}
+
+@media (max-width: 954px) {
+    table.chessboard {
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 592px) {
+    table.chessboard {
+        font-size: 17px;
+    }
+}
+
+@media (max-width: 560px) {
+    table.chessboard {
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 528px) {
+    table.chessboard {
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 496px) {
+    table.chessboard {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 464px) {
+    table.chessboard {
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 424px) {
+    table.chessboard {
+        font-size: 12px;
+    }
+}

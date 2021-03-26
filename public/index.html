@@ -156,7 +156,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="(game, i) in matchHistory()">
+                        <tr v-for="(game, i) in matchHistory()" :key="i">
                             <td>{{ i + 1 }}</td>
                             <td>{{ new Date(game.date).toLocaleString() }}</td>
                             <td>
@@ -307,31 +307,34 @@
                             </marker>
                         </defs>
 
-                        <circle v-for="annotation in annotations.filter(a => a.x1 === a.x2 && a.y1 === a.y2 && a.color === 'r')"
-                                stroke="#882020" stroke-width="4" fill="none" :opacity="1" :cx="annotation.x1"
+                        <circle v-for="(annotation, i) in annotations.filter(a => a.x1 === a.x2 && a.y1 === a.y2 && a.color === 'r')"
+                                :key="i" stroke="#882020" stroke-width="4" fill="none" :opacity="1" :cx="annotation.x1"
                                 :cy="annotation.y1" :r="radius"></circle>
-                        <line v-for="annotation in annotations.filter(a => (a.x1 !== a.x2 || a.y1 !== a.y2) && a.color === 'r')"
-                              stroke="#882020" stroke-width="12" stroke-linecap="round" marker-end="url(#arrowhead-r)"
+                        <line v-for="(annotation, i) in annotations.filter(a => (a.x1 !== a.x2 || a.y1 !== a.y2) && a.color === 'r')"
+                              :key="i" stroke="#882020" stroke-width="12" stroke-linecap="round"
+                              marker-end="url(#arrowhead-r)"
                               :opacity="1" :x1="annotation.x1" :y1="annotation.y1" :x2="annotation.x2"
                               :y2="annotation.y2"></line>
 
                         <circle
-                                v-for="annotation in annotations.filter(a => (a.x1 === a.x2 && a.y1 === a.y2) && a.color === 'g')"
-                                stroke="#157818" stroke-width="4" fill="none" :opacity="1" :cx="annotation.x1"
+                                v-for="(annotation, i) in annotations.filter(a => (a.x1 === a.x2 && a.y1 === a.y2) && a.color === 'g')"
+                                :key="i" stroke="#157818" stroke-width="4" fill="none" :opacity="1" :cx="annotation.x1"
                                 :cy="annotation.y1" :r="radius"></circle>
                         <line
-                              v-for="annotation in annotations.filter(a => (a.x1 !== a.x2 || a.y1 !== a.y2) && a.color === 'g')"
-                              stroke="#157818" stroke-width="12" stroke-linecap="round" marker-end="url(#arrowhead-g)"
+                              v-for="(annotation, i) in annotations.filter(a => (a.x1 !== a.x2 || a.y1 !== a.y2) && a.color === 'g')"
+                              :key="i" stroke="#157818" stroke-width="12" stroke-linecap="round"
+                              marker-end="url(#arrowhead-g)"
                               :opacity="1" :x1="annotation.x1" :y1="annotation.y1" :x2="annotation.x2"
                               :y2="annotation.y2"></line>
 
                         <circle
-                                v-for="annotation in annotations.filter(a => (a.x1 === a.x2 && a.y1 === a.y2) && a.color === 'b')"
-                                stroke="#003088" stroke-width="4" fill="none" :opacity="1" :cx="annotation.x1"
+                                v-for="(annotation, i) in annotations.filter(a => (a.x1 === a.x2 && a.y1 === a.y2) && a.color === 'b')"
+                                :key="i" stroke="#003088" stroke-width="4" fill="none" :opacity="1" :cx="annotation.x1"
                                 :cy="annotation.y1" :r="radius"></circle>
                         <line
-                              v-for="annotation in annotations.filter(a => (a.x1 !== a.x2 || a.y1 !== a.y2) && a.color === 'b')"
-                              stroke="#003088" stroke-width="12" stroke-linecap="round" marker-end="url(#arrowhead-b)"
+                              v-for="(annotation, i) in annotations.filter(a => (a.x1 !== a.x2 || a.y1 !== a.y2) && a.color === 'b')"
+                              :key="i" stroke="#003088" stroke-width="12" stroke-linecap="round"
+                              marker-end="url(#arrowhead-b)"
                               :opacity="1" :x1="annotation.x1" :y1="annotation.y1" :x2="annotation.x2"
                               :y2="annotation.y2"></line>
 
@@ -374,6 +377,7 @@
                               stroke-linecap="round" marker-end="url(#arrowhead-pb)" :opacity="0.67"
                               :x1="scores[game.currMove]?.bestMove.x1" :y1="scores[game.currMove]?.bestMove.y1"
                               :x2="scores[game.currMove]?.bestMove.x2" :y2="scores[game.currMove]?.bestMove.y2">
+                        </line>
                     </svg>
 
                     <div v-if="['spec', 'analysis'].includes(game.gamemode)" class="analysisBar"
@@ -413,6 +417,7 @@
 
                             <ul class="pieces">
                                 <li v-for="(piece, i) in (game.playerColor === 'white' ? takenPiecesW() : takenPiecesB())"
+                                    :key="i"
                                     :class="{separator: i > 0 && piece.char !== (game.playerColor === 'white' ? takenPiecesW() : takenPiecesB())[i -1].char}">
                                     <img :src="`assets/${piece.image}.png`" alt="" />
                                 </li>
@@ -425,7 +430,7 @@
 
                         <div class="historyResult">
                             <div class="history">
-                                <template v-for="(movement, i) in game.movements">
+                                <template v-for="(movement, i) in game.movements" :key="i">
                                     <span v-if="i % 2 === 0" class="rowid">{{ i / 2 + 1 }}</span>
                                     <span class="movement"
                                           :class="{current: i === game.currMove, clickable: true}"
@@ -442,6 +447,7 @@
                         <div class="player">
                             <ul class="pieces">
                                 <li v-for="(piece, i) in (game.playerColor === 'white' ? takenPiecesB() : takenPiecesW())"
+                                    :key="i"
                                     :class="{separator: i > 0 && piece.char !== (game.playerColor === 'white' ? takenPiecesB() : takenPiecesW())[i -1].char}">
                                     <img :src="`assets/${piece.image}.png`" alt="" />
                                 </li>

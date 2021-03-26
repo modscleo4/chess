@@ -407,7 +407,11 @@ const app = Vue.createApp({
                 return m * (x - (-200)) + 0;
             }
 
-            this.percentage = f(score);
+            function g(x) {
+                return 50 + 13.572088082974533 * Math.cbrt(x - 50);
+            }
+
+            this.percentage = g(f(score));
         },
 
         scrollToResult() {
