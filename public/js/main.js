@@ -377,10 +377,13 @@ const app = Vue.createApp({
                     }
 
                     const mult = this.game.currPlayer === 'white' ? 1 : -1;
-                    const move = /(?<Begin>bestmove) (?<J>[a-z])(?<I>\d)(?<NewJ>[a-z])(?<NewI>\d)/g.exec(e)?.groups ?? /(?<Begin>info) depth (?<Depth>\d+) seldepth \d+ multipv \d+ score (?<Score>mate|cp) (?<ScoreEval>-?\d+) nodes \d+ nps \d+(?: hashfull \d+)?(?: tbhits \d+)? time \d+ pv (?<J>[a-z])(?<I>\d)(?<NewJ>[a-z])(?<NewI>\d)/gm.exec(e)?.groups;
+                    const move = /(?<Begin>bestmove) (?<J>[a-z])(?<I>\d)(?<NewJ>[a-z])(?<NewI>\d)(?<PromoteTo>krbq)?/g.exec(e)?.groups ?? /(?<Begin>info) depth (?<Depth>\d+) seldepth \d+ multipv \d+ score (?<Score>mate|cp) (?<ScoreEval>-?\d+) nodes \d+ nps \d+(?: hashfull \d+)?(?: tbhits \d+)? time \d+ pv (?<J>[a-z])(?<I>\d)(?<NewJ>[a-z])(?<NewI>\d)(?<PromoteTo>krbq)?/gm.exec(e)?.groups;
 
                     if (['sp'].includes(this.game.gamemode)) {
-                        move?.Begin === 'bestmove' && this.commitMovement(8 - parseInt(move.I), 'abcdefgh'.indexOf(move.J), 8 - parseInt(move.NewI), 'abcdefgh'.indexOf(move.NewJ));
+                        if (move?.Begin === 'bestmove') {
+                            this.game.promoteTo = move.PromoteTo?.toUpperCase();
+                            this.commitMovement(8 - parseInt(move.I), 'abcdefgh'.indexOf(move.J), 8 - parseInt(move.NewI), 'abcdefgh'.indexOf(move.NewJ));
+                        }
                         return;
                     }
 
