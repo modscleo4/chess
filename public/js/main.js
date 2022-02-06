@@ -538,13 +538,13 @@ const app = Vue.createApp({
             this.allowLogin = true;
 
             this.game.timePlayer === -1 && (this.game.timePlayer = Infinity);
-            ['mp', 'spec'].includes(this.game.gamemode) && this.loginServer();
+            if (['mp', 'spec'].includes(this.game.gamemode)) this.loginServer();
 
-            !['smp', 'mp', 'settings'].includes(this.game.gamemode) && this.sendUCI(`setoption name Threads value ${this.config.threads}`);
-            !['smp', 'mp', 'settings'].includes(this.game.gamemode) && this.sendUCI(`setoption name Hash value ${this.config.hash}`);
-            ['sp'].includes(this.game.gamemode) && this.sendUCI(`setoption name UCI_Elo value ${this.config.engineElo}`) && this.sendUCI('setoption name UCI_AnalyseMode value false');
-            ['sp'].includes(this.game.gamemode) && this.game.playerColor === 'black' && this.sendToEngine(true);
-            ['spec', 'analysis'].includes(this.game.gamemode) && this.sendUCI(`setoption name UCI_Elo value ${this.engine.options['UCI_Elo'].max}`) && this.sendUCI('setoption name UCI_AnalyseMode value true');
+            if (!['smp', 'mp', 'settings'].includes(this.game.gamemode)) this.sendUCI(`setoption name Threads value ${this.config.threads}`);
+            if (!['smp', 'mp', 'settings'].includes(this.game.gamemode)) this.sendUCI(`setoption name Hash value ${this.config.hash}`);
+            if (['sp'].includes(this.game.gamemode)) { this.sendUCI(`setoption name UCI_Elo value ${this.config.engineElo}`); this.sendUCI('setoption name UCI_AnalyseMode value false'); }
+            if (['sp'].includes(this.game.gamemode)) { this.game.playerColor === 'black'; this.sendToEngine(true); }
+            if (['spec', 'analysis'].includes(this.game.gamemode)) { this.sendUCI(`setoption name UCI_Elo value ${this.engine.options['UCI_Elo'].max}`); this.sendUCI('setoption name UCI_AnalyseMode value true'); }
 
             this.game.start = true;
         },
@@ -1224,7 +1224,7 @@ const app = Vue.createApp({
                 }
             }
 
-            if (['sp'].includes(this.game.gamemode) && this.game.currPlayer !== this.game.playerColor) {
+            if (['sp'].includes(this.game.gamemode) && this.game.currPlayer !== this.game.playerColor && checkValid) {
                 this.sendToEngine(true);
             }
 
