@@ -223,6 +223,9 @@ const app = Vue.createApp({
             } else {
                 this.setupStockfish();
             }
+        }).catch((e) => {
+            this.analysisEnabled = false;
+            this.engine.loaded = true;
         });
     },
 
@@ -387,10 +390,10 @@ const app = Vue.createApp({
                         return;
                     }
 
-                    move?.Depth && (this.currDepth = parseInt(move.Depth));
-                    move?.Score && (this.scores[this.game.currMove] = {d: this.currDepth, bestMove: null});
-                    move?.Score && move?.ScoreEval && (this.scores[this.game.currMove] = {...this.scores[this.game.currMove], score: move.Score === 'mate' ? `#${mult * parseInt(move?.ScoreEval)}` : mult * parseFloat(move.ScoreEval) / 100});
-                    move && this.drawBestMove(8 - parseInt(move.I), 'abcdefgh'.indexOf(move.J), 8 - parseInt(move.NewI), 'abcdefgh'.indexOf(move.NewJ), this.game.playerColor);
+                    if (move?.Depth) { this.currDepth = parseInt(move.Depth); }
+                    if (move?.Score) { this.scores[this.game.currMove] = {d: this.currDepth, bestMove: null}; }
+                    if (move?.Score && move?.ScoreEval) { this.scores[this.game.currMove] = {...this.scores[this.game.currMove], score: move.Score === 'mate' ? `#${mult * parseInt(move?.ScoreEval)}` : mult * parseFloat(move.ScoreEval) / 100}; }
+                    if (move) { this.drawBestMove(8 - parseInt(move.I), 'abcdefgh'.indexOf(move.J), 8 - parseInt(move.NewI), 'abcdefgh'.indexOf(move.NewJ), this.game.playerColor); }
 
                     if (this.scores[this.game.currMove]) {
                         this.updatePercentage();
@@ -543,7 +546,7 @@ const app = Vue.createApp({
             if (!['smp', 'mp', 'settings'].includes(this.game.gamemode)) this.sendUCI(`setoption name Threads value ${this.config.threads}`);
             if (!['smp', 'mp', 'settings'].includes(this.game.gamemode)) this.sendUCI(`setoption name Hash value ${this.config.hash}`);
             if (['sp'].includes(this.game.gamemode)) { this.sendUCI(`setoption name UCI_Elo value ${this.config.engineElo}`); this.sendUCI('setoption name UCI_AnalyseMode value false'); }
-            if (['sp'].includes(this.game.gamemode)) { this.game.playerColor === 'black'; this.sendToEngine(true); }
+            if (['sp'].includes(this.game.gamemode) && this.game.playerColor === 'black') { this.sendToEngine(true); }
             if (['spec', 'analysis'].includes(this.game.gamemode)) { this.sendUCI(`setoption name UCI_Elo value ${this.engine.options['UCI_Elo'].max}`); this.sendUCI('setoption name UCI_AnalyseMode value true'); }
 
             this.game.start = true;

@@ -1,4 +1,4 @@
-import WebSocket from 'ws';
+import WebSocket, {WebSocketServer} from 'ws';
 import express from 'express';
 import compression from 'compression';
 import crypto from 'crypto';
@@ -34,7 +34,7 @@ function shouldCompress(request, response) {
     return compression.filter(request, response);
 }
 
-const ws = new WebSocket.Server({server});
+const ws = new WebSocketServer({server});
 
 /**
  *

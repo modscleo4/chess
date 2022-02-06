@@ -62,7 +62,7 @@
             </header>
 
             <div class="gamemodes" v-if="!game.gamemode">
-                <button type="button" class="btn btn-secondary"
+                <button v-if="analysisEnabled" type="button" class="btn btn-secondary"
                         @click="game.gamemode = 'sp'; selectMode = false; selectVariant = true; createGame = true;">
                     Singleplayer (vs Engine)</button>
                 <button type="button" class="btn btn-primary"
