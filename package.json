@@ -9,7 +9,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node --experimental-json-modules ."
+    "start": "node --experimental-json-modules .",
+    "dev": "nodemon"
   },
   "keywords": [],
   "author": {
@@ -23,10 +24,10 @@
   "homepage": "modscleo4.github.io/chess",
   "dependencies": {
     "compression": "^1.7.4",
-    "express": "^4.17.2",
-    "stockfish-nnue.wasm": "^0.0.1",
+    "express": "^4.18.0",
+    "stockfish-nnue.wasm": "^1.0.0-1946a675.smolnet",
     "stockfish.wasm": "^0.10.0",
-    "ws": "^8.4.2"
+    "ws": "^8.5.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.15"
@@ -37,6 +38,6 @@
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.6",
-    "utf-8-validate": "^5.0.8"
+    "utf-8-validate": "^5.0.9"
   }
 }

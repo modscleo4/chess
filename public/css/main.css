@@ -98,7 +98,11 @@ a:hover {
 }
 
 .table {
-    color: unset;
+    color: var(--text-color);
+}
+
+.table.table-hover tbody tr:hover {
+    color: var(--text-color-hover);
 }
 
 .menu {
@@ -136,17 +140,95 @@ a:hover {
     background-size: cover;
 }
 
+#app > header {
+    width: 100%;
+    position: absolute;
+    top: 0;
+    display: grid;
+    grid-template-columns: auto auto;
+    align-items: center;
+    padding: 12px;
+    justify-content: space-between;
+}
+
+#app > header h1 {
+    font-family: 'Granotta';
+    font-size: 2.5em;
+}
+
+.sidebar {
+    position: fixed;
+    left: 0;
+    height: 100%;
+    width: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.10);
+    transition: width 100ms;
+}
+
+.sidebar.sidebar-right {
+    left: unset;
+    right: 0;
+}
+
+.sidebar.center {
+    right: -50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.sidebar.center.open {
+    right: 0;
+}
+
+.sidebar.open {
+    width: 400px;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar ul li {
+    margin: 0;
+    padding: 16px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: auto;
+    grid-template-rows: min-content;
+    align-items: center;
+    font-family: 'Oswald', sans-serif;
+}
+
+.sidebar-backdrop {
+    width: 100%;
+    height: 100%;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 950;
+    background-color: rgba(0, 0, 0, 0.4);
+    /*backdrop-filter: blur(2px);*/
+}
+
+.sidebar a {
+    transition: all 100ms;
+}
+
+.sidebar a.active {
+    color: var(--body-color-alt);
+}
+
 .mainMenu {
     display: grid;
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto;
     grid-row-gap: 64px;
     text-align: center;
     padding-top: 24px;
-}
-
-.mainMenu header h1 {
-    font-family: 'Granotta';
-    font-size: 4em;
 }
 
 .mainMenu .gamemodes,
@@ -162,6 +244,42 @@ a:hover {
 
 .mainMenu .variant-selector .form-group input {
     font-size: 1rem;
+}
+
+.mainMenu .variant-selector .playerColor {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.mainMenu .variant-selector .playerColor img {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    object-position: left;
+}
+
+.mainMenu .variant-selector .playerColor .random {
+    position: relative;
+}
+
+.mainMenu .variant-selector .playerColor .random img:first-child {
+    width: 24px;
+    height: 48px;
+}
+
+.mainMenu .variant-selector .playerColor .random img:last-child {
+    width: 24px;
+    height: 48px;
+    object-position: right;
+}
+
+.mainMenu thead {
+    background-color: var(--btn-background-color-hover);
+    filter: drop-shadow(0 0 4px var(--drop-shadow-color));
+    color: var(--btn-text-color);
+    position: sticky;
+    top: 0;
 }
 
 .mainMenu .settings .form-group {

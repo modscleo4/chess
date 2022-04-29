@@ -30,10 +30,8 @@ const app = Vue.createApp({
         modal: null,
         page: '',
         connection: {
-            //protocol: 'ws',
-            protocol: 'wss',
-            //address: 'localhost:3000',
-            address: 'chessjs-web.herokuapp.com',
+            protocol: 'ws',
+            address: 'localhost:3000',
             socket: null,
             gameid: null,
             canStart: false,
@@ -73,7 +71,7 @@ const app = Vue.createApp({
         selectVariant: false,
         selectMode: false,
         createGame: false,
-        playerName: localStorage.getItem('playerName'),
+        playerName: localStorage.getItem('playerName') ?? 'Player',
         sidebarOpened: false,
         standalone: window.matchMedia('(display-mode: standalone)').matches,
         drag: {
@@ -120,6 +118,7 @@ const app = Vue.createApp({
         annotationPreview: null,
         firstRun: true,
         allowLogin: false,
+        onlineGames: [],
         config: {
             get theme() {
                 return localStorage.getItem('theme') ?? 'system';
@@ -181,6 +180,17 @@ const app = Vue.createApp({
     }),
 
     mounted() {
+        const protocol = window.location.protocol;
+        const address = window.location.host;
+
+        if (protocol === 'http:') {
+            this.connection.protocol = 'ws';
+        } else if (protocol === 'https:') {
+            this.connection.protocol = 'wss';
+        }
+
+        this.connection.address = address;
+
         this.reset();
         this.connection.gameid = new URLSearchParams(new URL(window.location.href).search).get('gameid');
         this.game.gamemode = new URLSearchParams(new URL(window.location.href).search).get('gamemode');
@@ -236,7 +246,36 @@ const app = Vue.createApp({
     },
 
     methods: {
-        openModal({type, title, body, primaryButton, closeButton = 'Fechar', onClose = () => { }, onCancel = () => { }}) {
+        /**
+         *
+         * @param {Date} date
+         * @return {string}
+         */
+        formatDateTime(date) {
+            return new Intl.DateTimeFormat('pt-BR', {
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: 'numeric',
+                second: 'numeric',
+            }).format(date);
+        },
+
+        /**
+         *
+         * @param {Date} date
+         * @return {string}
+         */
+        formatDate(date) {
+            return new Intl.DateTimeFormat('pt-BR', {
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric',
+            }).format(date);
+        },
+
+        openModal({type, title, body, primaryButton, closeButton = 'Fechar', onClose = () => { }, onCancel = () => { }, beforeOpen = () => { }}) {
             let interval;
 
             const open = () => {
@@ -252,7 +291,13 @@ const app = Vue.createApp({
                     onCancel,
                 };
 
-                jQuery('#modal').modal('show').on('hidden.bs.modal', () => {
+                beforeOpen();
+
+                jQuery('#modal').modal({keyboard: true}).modal('show').on('shown.bs.modal', () => {
+                    if (type === 'prompt') {
+                        document.querySelector('#modal input').focus();
+                    }
+                }).on('hidden.bs.modal', () => {
                     this.modal = null;
                 });
             };
@@ -266,6 +311,26 @@ const app = Vue.createApp({
 
         confirm(body, title = 'Confirmação', onClose = () => { }, onCancel = () => { }) {
             this.openModal({type: 'confirm', title, body, primaryButton: 'Sim', closeButton: 'Não', onClose, onCancel});
+        },
+
+        changeUsername() {
+            this.openModal({
+                type: 'prompt',
+                title: 'Novo nome de usuário',
+                body: 'Digite o novo nome de usuário',
+                primaryButton: 'OK',
+                closeButton: 'Cancelar',
+                onClose: () => {
+                    const username = this.modal.inputValue;
+                    if (username !== '') {
+                        this.playerName = username;
+                        localStorage.setItem('playerName', this.playerName);
+                    }
+                },
+                beforeOpen: () => {
+                    this.modal.inputValue = this.playerName;
+                },
+            });
         },
 
         matchHistory() {
@@ -390,10 +455,10 @@ const app = Vue.createApp({
                         return;
                     }
 
-                    if (move?.Depth) { this.currDepth = parseInt(move.Depth); }
-                    if (move?.Score) { this.scores[this.game.currMove] = {d: this.currDepth, bestMove: null}; }
-                    if (move?.Score && move?.ScoreEval) { this.scores[this.game.currMove] = {...this.scores[this.game.currMove], score: move.Score === 'mate' ? `#${mult * parseInt(move?.ScoreEval)}` : mult * parseFloat(move.ScoreEval) / 100}; }
-                    if (move) { this.drawBestMove(8 - parseInt(move.I), 'abcdefgh'.indexOf(move.J), 8 - parseInt(move.NewI), 'abcdefgh'.indexOf(move.NewJ), this.game.playerColor); }
+                    if (move?.Depth) {this.currDepth = parseInt(move.Depth);}
+                    if (move?.Score) {this.scores[this.game.currMove] = {d: this.currDepth, bestMove: null};}
+                    if (move?.Score && move?.ScoreEval) {this.scores[this.game.currMove] = {...this.scores[this.game.currMove], score: move.Score === 'mate' ? `#${mult * parseInt(move?.ScoreEval)}` : mult * parseFloat(move.ScoreEval) / 100};}
+                    if (move) {this.drawBestMove(8 - parseInt(move.I), 'abcdefgh'.indexOf(move.J), 8 - parseInt(move.NewI), 'abcdefgh'.indexOf(move.NewJ), this.game.playerColor);}
 
                     if (this.scores[this.game.currMove]) {
                         this.updatePercentage();
@@ -474,7 +539,8 @@ const app = Vue.createApp({
             this.game.gamemode = null;
             this.game.won = null;
             this.game.draw = false;
-            this.game.playerColor = 'white';
+            this.game.playerNames = {white: 'Brancas', black: 'Pretas'},
+                this.game.playerColor = 'white';
             this.game.currPlayer = 'white';
             this.game.timePlayer = 10;
             this.game.timeInc = 5;
@@ -545,9 +611,17 @@ const app = Vue.createApp({
 
             if (!['smp', 'mp', 'settings'].includes(this.game.gamemode)) this.sendUCI(`setoption name Threads value ${this.config.threads}`);
             if (!['smp', 'mp', 'settings'].includes(this.game.gamemode)) this.sendUCI(`setoption name Hash value ${this.config.hash}`);
-            if (['sp'].includes(this.game.gamemode)) { this.sendUCI(`setoption name UCI_Elo value ${this.config.engineElo}`); this.sendUCI('setoption name UCI_AnalyseMode value false'); }
-            if (['sp'].includes(this.game.gamemode) && this.game.playerColor === 'black') { this.sendToEngine(true); }
-            if (['spec', 'analysis'].includes(this.game.gamemode)) { this.sendUCI(`setoption name UCI_Elo value ${this.engine.options['UCI_Elo'].max}`); this.sendUCI('setoption name UCI_AnalyseMode value true'); }
+            if (['sp'].includes(this.game.gamemode)) {this.sendUCI(`setoption name UCI_Elo value ${this.config.engineElo}`); this.sendUCI('setoption name UCI_AnalyseMode value false');}
+            if (['sp'].includes(this.game.gamemode) && this.game.playerColor === 'black') {this.sendToEngine(true);}
+            if (['spec', 'analysis'].includes(this.game.gamemode)) {this.sendUCI(`setoption name UCI_Elo value ${this.engine.options['UCI_Elo'].max}`); this.sendUCI('setoption name UCI_AnalyseMode value true');}
+
+            if (['sp'].includes(this.game.gamemode)) {
+                if (this.game.playerColor === 'white') {
+                    this.game.playerNames = {white: 'Você', black: 'Engine'};
+                } else {
+                    this.game.playerNames = {white: 'Engine', black: 'Você'};
+                }
+            }
 
             this.game.start = true;
         },
@@ -567,6 +641,18 @@ const app = Vue.createApp({
             this.game.currMove = game.movements.length - 1;
 
             this.scrollToResult();
+        },
+
+        async loadOnlineGames(played = false) {
+            this.onlineGames = await fetch(new Request(played ? '/api/games/played' : '/api/games', {
+                method: 'GET',
+                headers: new Headers({
+                    'Content-Type': 'application/json',
+                    'X-Username': this.playerName,
+                    'X-Secret': this.connection.secret,
+                }),
+            }),
+            ).then(res => res.json()).catch(err => []);
         },
 
         /**

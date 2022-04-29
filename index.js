@@ -22,7 +22,53 @@ const server = express()
     .use(compression({level: 1, filter: shouldCompress}))
     .use('/node_modules/', express.static('node_modules/', options))
     .use('/', express.static('public/', options))
+    .use('/api/games/played/', (req, res) => {
+        const username = req.headers['x-username'];
+        const secret = req.headers['x-secret'];
+
+        if (!username || !secret) {
+            return res.status(400).json({error: 'Missing username or secret'});
+        }
+
+        const games_formatted = [];
+        for (const [gameId, game] of games) {
+            if (!(game.player1Name === username && game.player1Secret === secret
+                || game.player2Name === username && game.player2Secret === secret)) {
+                continue;
+            }
+
+            games_formatted.push({
+                gameId,
+                player1: game.player1Name,
+                player2: game.player2Name,
+                createdAt: game.createdAt,
+            });
+        }
+
+        return res.json(games_formatted);
+    })
+    .use('/api/games/', (req, res) => {
+        const games_formatted = [];
+        for (const [gameId, game] of games) {
+            if (!isGameStarted(game)) {
+                continue;
+            }
+
+            games_formatted.push({
+                gameId,
+                player1: game.player1Name,
+                player2: game.player2Name,
+                createdAt: game.createdAt,
+            });
+        }
+
+        return res.json(games_formatted);
+    })
     .listen(port);
+
+server.on('listening', () => {
+    console.log(`Server listening on port ${port}`);
+});
 
 function shouldCompress(request, response) {
     if (request.headers['x-no-compression']) {
@@ -90,12 +136,23 @@ function randomString(n = 64) {
  * @property {number | null} timeout
  *
  * @property {Set<WebSocket>} spectators
+ *
+ * @property {Date} createdAt
  */
 
 /**
  * @type {Map<string, Game>}
  */
 const games = new Map();
+
+/**
+ *
+ * @param {Game} game
+ * @returns
+ */
+function isGameStarted(game) {
+    return game.player1Connected && game.player2Connected;
+}
 
 /**
  * @param {Game} game
@@ -194,6 +251,8 @@ const commands = {
             timeout: null,
 
             spectators: new Set(),
+
+            createdAt: new Date(),
         };
 
         console.log(`New Game: ${gameid}: ${timePlayer} - ${timeInc}`);
