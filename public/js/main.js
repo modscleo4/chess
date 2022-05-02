@@ -18,6 +18,10 @@ window.addEventListener('appinstalled', () => {
     console.log('A2HS installed');
 });
 
+function padLeft(str, length, char = '0') {
+    return (new Array(length + 1).join(char) + str).slice(-length);
+}
+
 /**
  * @type {Worker|undefined}
  */
@@ -236,6 +240,11 @@ const app = Vue.createApp({
         }).catch((e) => {
             this.analysisEnabled = false;
             this.engine.loaded = true;
+        });
+
+        // Enable all tooltips
+        [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')).forEach(function (el) {
+            new bootstrap.Tooltip(el);
         });
     },
 
@@ -1510,5 +1519,34 @@ const app = Vue.createApp({
         clearAnnotations() {
             this.annotations = [];
         },
+
+        /**
+         *
+         * @param {HTMLInputElement} slider
+         * @param {number} delay
+         */
+        reloadSliderTooltip(slider, delay = 0) {
+            const callback = () => {
+                const min = parseInt(slider.min);
+                const max = parseInt(slider.max);
+                const width = slider.getBoundingClientRect().width - 18;
+
+                const value = parseInt(slider.value);
+                const tooltip = document.querySelector('#' + slider.getAttribute('aria-describedby'));
+                tooltip.querySelector('.tooltip-inner').innerHTML = padLeft(value, 2);
+                const percentage = ((value - min) / (max - min));
+
+                tooltip.style.left = (-width / 2 + width * percentage) + 'px';
+
+                // Force update tooltip
+                slider.setAttribute('data-bs-original-title', padLeft(value, 2));
+            };
+
+            if (delay) {
+                setTimeout(callback, delay);
+            } else {
+                callback();
+            }
+        }
     },
 }).mount('#app');

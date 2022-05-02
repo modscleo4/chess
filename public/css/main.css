@@ -45,8 +45,8 @@ a:hover {
     background-color: var(--even);
 }
 
-.modal-content .close {
-    color: var(--text-color) !important;
+.modal-content .btn-close {
+    background-color: brown;
 }
 
 .modal-header,
@@ -101,8 +101,12 @@ a:hover {
     color: var(--text-color);
 }
 
-.table.table-hover tbody tr:hover {
+.table.table-hover tbody tr:hover *:not(button) {
     color: var(--text-color-hover);
+}
+
+.form-range {
+    border: none;
 }
 
 .menu {

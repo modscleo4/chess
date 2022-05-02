@@ -10,7 +10,7 @@
   "type": "module",
   "scripts": {
     "start": "node --experimental-json-modules .",
-    "dev": "nodemon"
+    "dev": "npx nodemon"
   },
   "keywords": [],
   "author": {
