@@ -73,11 +73,11 @@
                 </button>
                 <ul class="dropdown-menu" aria-labelledby="dropdownMenuPlayer">
                     <li><a class="dropdown-item" href="#" @click="changeUsername();">Alterar Nome</a></li>
-                    <li><a class="dropdown-item" href="#"
+                    <li v-if="!game.start"><a class="dropdown-item" href="#"
                            @click="selectMode = false; selectVariant = false; createGame = false; game.gamemode = 'history';">Histórico
                             de Partidas</a></li>
                     <li><a class="dropdown-item" href="#"
-                           @click="selectMode = false; selectVariant = false; createGame = false; sidebarOpened = true;">Configurações</a>
+                           @click="sidebarOpened = true;">Configurações</a>
                     </li>
                 </ul>
             </div>
