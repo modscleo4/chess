@@ -18,10 +18,6 @@ window.addEventListener('appinstalled', () => {
     console.log('A2HS installed');
 });
 
-function padLeft(str, length, char = '0') {
-    return (new Array(length + 1).join(char) + str).slice(-length);
-}
-
 /**
  * @type {Worker|undefined}
  */
@@ -32,6 +28,7 @@ let stockfish;
 const app = Vue.createApp({
     data: () => ({
         modal: null,
+        modalEl: null,
         page: '',
         connection: {
             protocol: 'ws',
@@ -246,6 +243,16 @@ const app = Vue.createApp({
         [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')).forEach(function (el) {
             new bootstrap.Tooltip(el);
         });
+
+        this.modalEl = document.querySelector('#modal');
+
+        this.modalEl.addEventListener('shown.bs.modal', () => {
+            document.querySelector('#modal input')?.focus();
+        });
+
+        this.modalEl.addEventListener('hidden.bs.modal', () => {
+            this.modal = null;
+        });
     },
 
     computed: {
@@ -302,13 +309,8 @@ const app = Vue.createApp({
 
                 beforeOpen();
 
-                jQuery('#modal').modal({keyboard: true}).modal('show').on('shown.bs.modal', () => {
-                    if (type === 'prompt') {
-                        document.querySelector('#modal input').focus();
-                    }
-                }).on('hidden.bs.modal', () => {
-                    this.modal = null;
-                });
+                const modal = new bootstrap.Modal('#modal', {keyboard: true});
+                modal.show();
             };
 
             interval = setInterval(() => !this.modal && open(), 100);
@@ -332,8 +334,17 @@ const app = Vue.createApp({
                 onClose: () => {
                     const username = this.modal.inputValue;
                     if (username !== '') {
+                        const oldUsername = this.playerName;
                         this.playerName = username;
                         localStorage.setItem('playerName', this.playerName);
+
+                        if (this.game.gamemode === 'mp') {
+                            this.connection.socket.send(JSON.stringify({
+                                command: 'changeUsername',
+                                oldUsername,
+                                newUsername: username,
+                            }));
+                        }
                     }
                 },
                 beforeOpen: () => {
@@ -846,7 +857,14 @@ const app = Vue.createApp({
 
                 draw: async (message) => {
                     this.draw();
-                }
+                },
+
+                changeUsername: async (message) => {
+                    const {player1Name, player1Color, player2Name, player2Color} = message;
+
+                    this.game.playerNames[player1Color] = player1Name;
+                    this.game.playerNames[player2Color] = player2Name;
+                },
             };
 
             const socket = createSocket(this.connection.protocol, this.connection.address, commands);
@@ -1533,13 +1551,13 @@ const app = Vue.createApp({
 
                 const value = parseInt(slider.value);
                 const tooltip = document.querySelector('#' + slider.getAttribute('aria-describedby'));
-                tooltip.querySelector('.tooltip-inner').innerHTML = padLeft(value, 2);
+                tooltip.querySelector('.tooltip-inner').innerHTML = value.toString().padStart(2, '0');
                 const percentage = ((value - min) / (max - min));
 
                 tooltip.style.left = (-width / 2 + width * percentage) + 'px';
 
                 // Force update tooltip
-                slider.setAttribute('data-bs-original-title', padLeft(value, 2));
+                slider.setAttribute('data-bs-original-title', value.toString().padStart(2, '0'));
             };
 
             if (delay) {

@@ -787,6 +787,47 @@ const commands = {
     rejectDraw() {
 
     },
+
+    changeUsername: async (socket, {oldUsername, newUsername}) => {
+        const game = games.get(socket.gameid);
+        if (!game) {
+            return;
+        }
+
+        if (game.player1 === socket) {
+            game.player1Name = newUsername;
+        } else if (game.player2 === socket) {
+            game.player2Name = newUsername;
+        } else {
+            return;
+        }
+
+        game.player1?.send(JSON.stringify({
+            command: 'changeUsername',
+            player1Name: game.player1Name,
+            player1Color: game.player1Color,
+            player2Name: game.player2Name,
+            player2Color: game.player2Color
+        }));
+
+        game.player2?.send(JSON.stringify({
+            command: 'changeUsername',
+            player1Name: game.player1Name,
+            player1Color: game.player1Color,
+            player2Name: game.player2Name,
+            player2Color: game.player2Color
+        }));
+
+        game.spectators.forEach(spectator => {
+            spectator.send(JSON.stringify({
+                command: 'changeUsername',
+                player1Name: game.player1Name,
+                player1Color: game.player1Color,
+                player2Name: game.player2Name,
+                player2Color: game.player2Color
+            }));
+        });
+    },
 };
 
 ws.on('connection', async socket => {
