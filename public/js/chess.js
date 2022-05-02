@@ -20,11 +20,13 @@ String.prototype.replaceAt = function (index, replacement) {
  * @property {string} image
  * @property {boolean} neverMoved
  * @property {Function} allowedMove
+ * @property {posColor} posColor
  */
 
 /**
  *
  * @typedef {('white'|'black')} PlayerColor
+ * @typedef {('white'|'black')} posColor
  */
 
 /**
@@ -467,7 +469,7 @@ export function boardToFEN(board, onlyBoard, lastMoved, currPlayer, newI, newJ, 
  * @param {Function} allowedMove
  * @return {Piece}
  */
-function makePiece(char, color, value, image, allowedMove) {
+function makePiece(char, color, value, image, allowedMove, posColor) {
     return {
         char,
         color,
@@ -475,6 +477,7 @@ function makePiece(char, color, value, image, allowedMove) {
         image,
         neverMoved: true,
         allowedMove,
+        posColor,
     };
 }
 
@@ -590,16 +593,18 @@ export function generateArray(fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
                 neverMoved = false;
             }
 
+            const posColor = i % 2 === 0 ? (j % 2 === 0 ? 'white' : 'black') : (j % 2 === 0 ? 'black' : 'white');
+
             return {
                 r: {...RookB, neverMoved},
                 n: {...KnightB},
-                b: {...BishopB},
+                b: {...BishopB, posColor},
                 q: {...QueenB},
                 k: {...KingB},
                 p: {...PawnB, neverMoved, longMove},
                 R: {...RookW, neverMoved},
                 N: {...KnightW},
-                B: {...BishopW},
+                B: {...BishopW, posColor},
                 Q: {...QueenW},
                 K: {...KingW},
                 P: {...PawnW, neverMoved, longMove},
