@@ -31,7 +31,7 @@
     <script type="text/javascript" src="js/theme.js"></script>
 
     <div id="app">
-        <div v-if="!engine.loaded" class="blur-background"></div>
+        <!-- <div v-if="!engine.loaded" class="blur-background"></div> -->
 
         <div class="modal fade" id="modal" data-bs-backdrop="static" data-bs-keyboard="false"
              tabindex="-1" aria-labelledby="modal" aria-hidden="true">
@@ -142,7 +142,7 @@
 
         <div v-if="!game.start" class="mainMenu">
             <div class="gamemodes" v-if="!game.gamemode">
-                <button v-if="analysisEnabled" type="button" class="btn btn-secondary"
+                <button v-if="analysisEnabled" type="button" class="btn btn-secondary" :disabled="!engine.loaded"
                         @click="game.gamemode = 'sp'; selectMode = false; selectVariant = true; createGame = true;">
                     Singleplayer (vs Engine)</button>
                 <button type="button" class="btn btn-primary"
@@ -204,16 +204,16 @@
                                required />
                         <label for="inputPlayerColor">Jogar de:</label>
                         <div class="playerColor">
-                            <button type="button" class="btn btn-secondary" @click="game.playerColor = 'white'"
-                                    :class="{'active': game.playerColor === 'white'}">
+                            <button type="button" class="btn" @click="game.playerColor = 'white'"
+                                    :class="[game.playerColor === 'white' ? 'active btn-primary' : 'btn-secondary']">
                                 <img src="assets/KingW.png" alt="White">
                             </button>
-                            <button type="button" class="btn btn-secondary" @click="game.playerColor = 'black'"
-                                    :class="{'active': game.playerColor === 'black'}">
+                            <button type="button" class="btn" @click="game.playerColor = 'black'"
+                                    :class="[game.playerColor === 'black' ? 'active btn-primary' : 'btn-secondary']">
                                 <img src="assets/KingB.png" alt="Black">
                             </button>
-                            <button type="button" class="btn btn-secondary random" @click="game.playerColor = 'random'"
-                                    :class="{'active': game.playerColor === 'random'}">
+                            <button type="button" class="btn random" @click="game.playerColor = 'random'"
+                                    :class="[game.playerColor === 'random' ? 'active btn-primary' : 'btn-secondary']">
                                 <img src="assets/KingW.png" alt="White">
                                 <img src="assets/KingB.png" alt="Black">
                             </button>
@@ -440,8 +440,8 @@
                     <div class="engine">
                         <p v-if="engine.calculating" class="calculating">Calculando...</p>
 
-                        <template v-if="analysisEnabled && ['spec', 'analysis'].includes(game.gamemode)">
-                            <div v-if="engine" class="labels">
+                        <template v-if="engine.loaded && analysisEnabled && ['spec', 'analysis'].includes(game.gamemode)">
+                            <div class="labels">
                                 <span>{{ engine.name }} {{ engine.ver }} <span
                                           class="tag">{{ engine.tag }}</span></span>
                                 <span>Profundidade: {{ currDepth }}/{{ config.depth }}</span>
