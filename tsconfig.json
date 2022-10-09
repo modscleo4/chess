@@ -1,0 +1,44 @@
+{
+    "compilerOptions": {
+        "moduleResolution": "NodeNext",
+        "module": "ESNext",
+        "target": "ESNext",
+        "sourceMap": true,
+        "outDir": "./dist",
+        "strict": true,
+        "pretty": true,
+        "experimentalDecorators": true,
+        "esModuleInterop": true,
+        "baseUrl": ".",
+        "paths": {
+            "@app/*": [
+                "./src/app/*"
+            ],
+            "@core/*": [
+                "./src/core/*"
+            ],
+        },
+        "plugins": [
+            {
+                "transform": "typescript-transform-paths",
+                "exclude": [
+                    "**/node_modules/**"
+                ]
+            },
+            {
+                "transform": "typescript-transform-paths",
+                "exclude": [
+                    "**/node_modules/**"
+                ],
+                "afterDeclarations": true
+            }
+        ]
+    },
+    "include": [
+        "src/**/*"
+    ],
+    "exclude": [
+        "node_modules",
+        "**/*.spec.ts"
+    ]
+}

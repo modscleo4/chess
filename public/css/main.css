@@ -250,6 +250,17 @@ a:hover {
     font-size: 1rem;
 }
 
+.mainMenu .variant-selector .times {
+    display: grid;
+    grid-template-columns: auto auto auto;
+    gap: 8px;
+    justify-content: center;
+}
+
+.mainMenu .variant-selector .times button {
+    width: 120px;
+}
+
 .mainMenu .variant-selector .playerColor {
     display: flex;
     gap: 8px;

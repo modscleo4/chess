@@ -6,13 +6,23 @@
     "type": "git",
     "url": "git+https://github.com/modscleo4/chess.git"
   },
-  "main": "index.js",
+  "main": "dist/server.js",
   "type": "module",
   "scripts": {
-    "start": "node --experimental-json-modules .",
-    "dev": "npx nodemon"
+    "build": "ttsc",
+    "clean": "tsc -b --clean",
+    "dev": "nodemon --inspect src/server.ts",
+    "start": "node .",
+    "test": "ts-node-esm src/test/index.ts",
+    "cannon": "npx autocannon -c 500 -d 30 --renderStatusCodes --latency localhost:3000/bin",
+    "generateKeys": "node ./bin/generateKeys.js"
   },
-  "keywords": [],
+  "keywords": [
+    "chess",
+    "js",
+    "ws",
+    "midori"
+  ],
   "author": {
     "name": "Dhiego Cassiano Fogaça Barbosa",
     "email": "modscleo4@outlook.com"
@@ -21,20 +31,29 @@
   "bugs": {
     "url": "https://github.com/modscleo4/chess/issues"
   },
-  "homepage": "modscleo4.github.io/chess",
+  "homepage": "modscleo4.dev.br/chess",
   "dependencies": {
-    "compression": "^1.7.4",
-    "express": "^4.18.0",
+    "@prisma/client": "^4.5.0",
+    "dotenv": "^16.0.3",
+    "midori": "github:modscleo4/midori#jwe",
+    "prisma": "^4.5.0",
     "stockfish-nnue.wasm": "^1.0.0-1946a675.smolnet",
     "stockfish.wasm": "^0.10.0",
-    "ws": "^8.5.0"
+    "ws": "^8.10.0"
   },
   "devDependencies": {
-    "nodemon": "^2.0.15"
+    "@types/node": "^18.11.7",
+    "@types/ws": "^8.5.3",
+    "nodemon": "^2.0.20",
+    "ts-node": "^10.9.1",
+    "tsconfig-paths": "^4.1.0",
+    "ttypescript": "^1.5.13",
+    "typescript": "^4.8.4",
+    "typescript-transform-paths": "^3.3.1"
   },
   "engines": {
-    "node": ">=14",
-    "npm": ">=7"
+    "node": ">=18",
+    "npm": ">=8"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.6",

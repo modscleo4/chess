@@ -46,6 +46,7 @@ const app = Vue.createApp({
             currPlayer: 'white',
             timePlayer: null,
             timeInc: null,
+            timeCustom: false,
             won: null,
             draw: false,
             board: null,
@@ -72,7 +73,7 @@ const app = Vue.createApp({
         selectVariant: false,
         selectMode: false,
         createGame: false,
-        playerName: localStorage.getItem('playerName') ?? 'Player',
+        playerName: localStorage.getItem('playerName'),
         sidebarOpened: false,
         standalone: window.matchMedia('(display-mode: standalone)').matches,
         drag: {
@@ -120,6 +121,7 @@ const app = Vue.createApp({
         firstRun: true,
         allowLogin: false,
         onlineGames: [],
+        user: null,
         config: {
             get theme() {
                 return localStorage.getItem('theme') ?? 'system';
@@ -226,7 +228,7 @@ const app = Vue.createApp({
 
         simd().then(simdSupported => {
             if (simdSupported) {
-                const js = importScript('node_modules/stockfish-nnue.wasm/stockfish.js');
+                const js = importScript('assets/stockfish-nnue.wasm/stockfish.js');
                 this.engine.ver = '13';
                 this.engine.tag = 'NNUE';
 
@@ -240,9 +242,7 @@ const app = Vue.createApp({
         });
 
         // Enable all tooltips
-        [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')).forEach(function (el) {
-            new bootstrap.Tooltip(el);
-        });
+        this.createTooltips();
 
         this.modalEl = document.querySelector('#modal');
 
@@ -253,6 +253,8 @@ const app = Vue.createApp({
         this.modalEl.addEventListener('hidden.bs.modal', () => {
             this.modal = null;
         });
+
+        this.tryLogin();
     },
 
     computed: {
@@ -289,6 +291,13 @@ const app = Vue.createApp({
                 month: 'numeric',
                 day: 'numeric',
             }).format(date);
+        },
+
+        createTooltips() {
+            // Enable all tooltips
+            [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]:not([data-bs-original-title])')).forEach(el => {
+                new bootstrap.Tooltip(el);
+            });
         },
 
         openModal({type, title, body, primaryButton, closeButton = 'Fechar', onClose = () => { }, onCancel = () => { }, beforeOpen = () => { }}) {
@@ -354,7 +363,7 @@ const app = Vue.createApp({
         },
 
         matchHistory() {
-            const matchHistory = JSON.parse(localStorage.getItem('gameHistory'));
+            const matchHistory = JSON.parse(localStorage.getItem('gameHistory')).map(a => ({...a, date: new Date(a.date)})).sort((a, b) => b.date - a.date);
             return matchHistory;
         },
 
@@ -560,10 +569,11 @@ const app = Vue.createApp({
             this.game.won = null;
             this.game.draw = false;
             this.game.playerNames = {white: 'Brancas', black: 'Pretas'},
-                this.game.playerColor = 'white';
+            this.game.playerColor = 'white';
             this.game.currPlayer = 'white';
             this.game.timePlayer = 10;
             this.game.timeInc = 5;
+            this.game.timeCustom = false;
             this.game.player1Timer = 0;
             this.game.player1TimerFn = null;
             this.game.player2Timer = 0;
@@ -598,23 +608,28 @@ const app = Vue.createApp({
 
         startGame() {
             if (!this.config.engineElo || this.config.engineElo < 100 || this.config.engineElo > 3200) {
-                this.alert('Preencha um valor válido entre 100 e 3200');
+                this.alert('Preencha um valor válido entre 100 e 3200.');
                 document.querySelector('#inputEngineElo')?.focus();
 
                 return;
             }
 
             if (!this.game.timePlayer || this.game.timePlayer <= 0 && this.game.timePlayer !== -1 || this.game.timePlayer > 180) {
-                this.alert('Preencha um valor válido entre 1 e 180');
+                this.alert('Preencha um valor válido entre 1 e 180.');
                 document.querySelector('#inputTimePlayer')?.focus();
 
                 return;
             }
 
             if (!this.game.timePlayer || this.game.timeInc < 0 || this.game.timeInc > 180) {
-                this.alert('Preencha um valor válido entre 0 e 180');
+                this.alert('Preencha um valor válido entre 0 e 180.');
                 document.querySelector('#inputTimeInc')?.focus();
 
+                return;
+            }
+
+            if (this.game.gamemode === 'mp' && !this.playerName) {
+                this.changeUsername();
                 return;
             }
 
@@ -1550,21 +1565,47 @@ const app = Vue.createApp({
                 const width = slider.getBoundingClientRect().width - 18;
 
                 const value = parseInt(slider.value);
-                const tooltip = document.querySelector('#' + slider.getAttribute('aria-describedby'));
-                tooltip.querySelector('.tooltip-inner').innerHTML = value.toString().padStart(2, '0');
                 const percentage = ((value - min) / (max - min));
 
+                const tooltip = document.querySelector('#' + slider.getAttribute('aria-describedby'));
+
+                tooltip.querySelector('.tooltip-inner').innerHTML = value.toString().padStart(2, '0');
                 tooltip.style.left = (-width / 2 + width * percentage) + 'px';
 
                 // Force update tooltip
                 slider.setAttribute('data-bs-original-title', value.toString().padStart(2, '0'));
             };
 
+            if (!document.querySelector('#' + slider.getAttribute('aria-describedby'))) {
+                new bootstrap.Tooltip(slider).show();
+            }
+
             if (delay) {
                 setTimeout(callback, delay);
             } else {
                 callback();
             }
-        }
+        },
+
+        login() {
+            location.href = 'login/';
+        },
+
+        logout() {
+            this.user = null;
+            localStorage.removeItem('logged');
+            this.playerName = localStorage.getItem('playerName');
+        },
+
+        tryLogin() {
+            const user = localStorage.getItem('oauth_user');
+            if (user) {
+                this.user = JSON.parse(user);
+                this.playerName = this.user.preferred_username;
+                localStorage.removeItem('oauth_user');
+            } else if (localStorage.getItem('logged')) {
+                this.login();
+            }
+        },
     },
 }).mount('#app');

@@ -3,6 +3,22 @@ import express from 'express';
 import compression from 'compression';
 import crypto from 'crypto';
 import * as Chess from './public/js/chess.js';
+import dotenv from 'dotenv';
+
+dotenv.config({ override: true });
+
+const OAuth2 = {
+    authURL: process.env.OAUTH2_AUTH_URL,
+    tokenURL: process.env.OAUTH2_TOKEN_URL,
+    identityURL: process.env.OAUTH2_IDENTITY_URL,
+    redirectURL: process.env.OAUTH2_REDIRECT_URL,
+    clientId: process.env.OAUTH2_CLIENT_ID,
+    clientSecret: process.env.OAUTH2_CLIENT_SECRET,
+};
+
+const oauth_logins = {
+
+};
 
 const port = parseInt(process.env.PORT || '3000');
 
@@ -12,7 +28,7 @@ const options = {
         response.set('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE');
         response.set('Access-Control-Allow-Headers', 'Content-Type');
         response.set('Cache-Control', 'public, max-age=600');
-        response.set('Expires', new Date(Date.now() + 1000 * 600).toUTCString());
+        response.set('Expires', new Date(Date.now() - 1000 * 600).toUTCString());
         response.set('Cross-Origin-Opener-Policy', 'same-origin');
         response.set('Cross-Origin-Embedder-Policy', 'require-corp');
     }
@@ -22,6 +38,59 @@ const server = express()
     .use(compression({level: 1, filter: shouldCompress}))
     .use('/node_modules/', express.static('node_modules/', options))
     .use('/', express.static('public/', options))
+    .use('/auth/callback', async (req, res) => {
+        const state = req.query.state;
+        const session_state = req.query.session_state;
+        const code = req.query.code;
+
+        if (!state || !session_state || !code || !oauth_logins[state]) {
+            console.log(req.query, state, code);
+            res.redirect('/');
+            return;
+        }
+
+        const token_response = await fetch(OAuth2.tokenURL, {
+            method: 'POST',
+            headers: {
+                Authorization: `Basic ${Buffer.from(`${OAuth2.clientId}:${OAuth2.clientSecret}`).toString('base64')}`,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                grant_type: 'authorization_code',
+                code,
+                redirect_uri: OAuth2.redirectURL,
+            }),
+        });
+
+        if (!token_response.ok) {
+            res.redirect('/');
+            return;
+        }
+
+        const { access_token, id_token } = await token_response.json();
+
+        const identity_response = await fetch(OAuth2.identityURL, {
+            headers: {
+                Authorization: `Bearer ${access_token}`,
+            },
+        });
+
+        if (!identity_response.ok) {
+            res.redirect('/');
+            return;
+        }
+
+        const user = await identity_response.json();
+
+        res.send(`<script>localStorage.setItem('logged', 'true'); localStorage.setItem('oauth_user', '${JSON.stringify(user)}'); location.href = '/';</script>`);
+        //res.send('<script>console.log(' + JSON.stringify({q: req.query, p: req.params, b: req.body, h: req.headers}) + ')</script>');
+    })
+    .use('/login', (req, res) => {
+        const state = crypto.randomUUID();
+        console.log(state);
+        oauth_logins[state] = {};
+        res.redirect(OAuth2.authURL + '?' + new URLSearchParams({response_type: 'code', client_id: OAuth2.clientId, redirect_uri: OAuth2.redirectURL, scope: 'openid profile', state}).toString());
+    })
     .use('/api/games/played/', (req, res) => {
         const username = req.headers['x-username'];
         const secret = req.headers['x-secret'];
