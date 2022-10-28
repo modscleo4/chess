@@ -1,6 +1,6 @@
 'use strict';
 
-import {simd} from 'https://unpkg.com/wasm-feature-detect?module';
+import { simd } from 'https://unpkg.com/wasm-feature-detect?module';
 import * as Vue from 'https://cdnjs.cloudflare.com/ajax/libs/vue/3.0.5/vue.esm-browser.prod.js';
 import * as Chess from './chess.js';
 import createSocket from './ws.js';
@@ -178,6 +178,14 @@ const app = Vue.createApp({
 
             set hash(val) {
                 localStorage.setItem('hash', val);
+            },
+
+            get pieceTheme() {
+                return localStorage.getItem('pieceTheme') ?? 'cburnett';
+            },
+
+            set pieceTheme(val) {
+                localStorage.setItem('pieceTheme', val);
             },
         },
     }),

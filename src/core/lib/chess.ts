@@ -590,14 +590,15 @@ export function pgnToCoord(
     currPlayer: PlayerColor,
     lastMoved: Piece | null
 ): { i: number, j: number, newI: number, newJ: number, promoteTo: string | null; } {
+    const _pgn = pgn;
     pgn = pgn.replace(/[+#]$/, '');
     pgn = pgn.replace(/ e.p.$/, '');
 
     let promoteTo = null;
-    let i = 0;
-    let j = 0;
-    let newI = 0;
-    let newJ = 0;
+    let i: number | undefined;
+    let j: number | undefined;
+    let newI: number;
+    let newJ: number;
     if (pgn === '0-0') {
         i = currPlayer === 'white' ? 7 : 0;
         j = 4;
@@ -655,6 +656,10 @@ export function pgnToCoord(
                 }
             }
         }
+    }
+
+    if (i === undefined || j === undefined) {
+        throw new Error('Invalid PGN: ' + _pgn);
     }
 
     return { i, j, newI, newJ, promoteTo };

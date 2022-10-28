@@ -65,6 +65,7 @@
     bottom: 0;
     margin: auto;
     max-height: 90%;
+    height: 90%;
 }
 
 .chessboard-container table.chessboard tr td.clickable img {

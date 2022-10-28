@@ -116,6 +116,19 @@
                                    required />
                         </div>
                     </div>
+
+                    <div class="row mb-3 justify-content-center">
+                        <div class="col-auto">
+                            <select name="pieceTheme" id="inputPieceTheme" class="form-control form-control-sm" v-model="config.pieceTheme">
+                                <option value="cburnett">cburnett</option>
+                                <option value="staunty">staunty</option>
+                            </select>
+                        </div>
+
+                        <div class="col-auto">
+                             <img :src="`assets/${config.pieceTheme}/KnightW.svg`" style="width: 32px" alt="White Knight">
+                        </div>
+                    </div>
                 </fieldset>
                 <fieldset>
                     <legend>Engine</legend>
@@ -284,16 +297,16 @@
                         <div class="playerColor">
                             <button type="button" class="btn" @click="game.playerColor = 'white'"
                                     :class="[game.playerColor === 'white' ? 'active btn-primary' : 'btn-secondary']">
-                                <img src="assets/KingW.png" alt="White">
+                                <img :src="`assets/${config.pieceTheme}/KingW.svg`" alt="White">
                             </button>
                             <button type="button" class="btn random" @click="game.playerColor = 'random'"
                                     :class="[game.playerColor === 'random' ? 'active btn-primary' : 'btn-secondary']">
-                                <img src="assets/KingW.png" alt="White">
-                                <img src="assets/KingB.png" alt="Black">
+                                <img :src="`assets/${config.pieceTheme}/KingW.svg`" alt="White">
+                                <img :src="`assets/${config.pieceTheme}/KingB.svg`" alt="Black">
                             </button>
                             <button type="button" class="btn" @click="game.playerColor = 'black'"
                                     :class="[game.playerColor === 'black' ? 'active btn-primary' : 'btn-secondary']">
-                                <img src="assets/KingB.png" alt="Black">
+                                <img :src="`assets/${config.pieceTheme}/KingB.svg`" alt="Black">
                             </button>
                         </div>
                     </div>
@@ -407,7 +420,7 @@
                                     @contextmenu.prevent
                                     @mousedown.right="startArrow(i, j, $event.shiftKey, $event.altKey)"
                                     @mousemove="moveArrow(i, j)" @mouseup.right="endArrow(i, j)">
-                                    <img v-if="board_cell" :src="`assets/${board_cell.image}.png`" alt=""
+                                    <img v-if="board_cell" :src="`assets/${config.pieceTheme}/${board_cell.image}.svg`" alt=""
                                          draggable="false">
                                     <span v-if="i === 7"
                                           class="file">{{ ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j] }}</span>
@@ -549,7 +562,7 @@
                                 <li v-for="(piece, i) in (game.playerColor === 'white' ? takenPiecesW() : takenPiecesB())"
                                     :key="i"
                                     :class="{separator: i > 0 && piece.char !== (game.playerColor === 'white' ? takenPiecesW() : takenPiecesB())[i -1].char}">
-                                    <img :src="`assets/${piece.image}.png`" alt="" />
+                                    <img :src="`assets/${config.pieceTheme}/${piece.image}.svg`" alt="" />
                                 </li>
 
                                 <li class="advantage">
@@ -579,7 +592,7 @@
                                 <li v-for="(piece, i) in (game.playerColor === 'white' ? takenPiecesB() : takenPiecesW())"
                                     :key="i"
                                     :class="{separator: i > 0 && piece.char !== (game.playerColor === 'white' ? takenPiecesB() : takenPiecesW())[i -1].char}">
-                                    <img :src="`assets/${piece.image}.png`" alt="" />
+                                    <img :src="`assets/${config.pieceTheme}/${piece.image}.svg`" alt="" />
                                 </li>
 
                                 <li class="advantage">{{ pointsAdvantage(game.playerColor) }}</li>

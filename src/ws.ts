@@ -119,7 +119,7 @@ export default function ws(server: Server): void {
                 createdAt: new Date(),
             };
 
-            console.log(`New Game: ${gameid}: ${data.timePlayer} - ${data.timeInc}`);
+            logger.debug(`New Game: ${gameid}: ${data.timePlayer} - ${data.timeInc}`);
             games.set(gameid, game);
 
             socket.send(JSON.stringify({
@@ -306,7 +306,7 @@ export default function ws(server: Server): void {
 
             game.takenPieces.push(<Chess.Piece[]> [...(game.takenPieces[game.takenPieces.length - 1] ?? []), takenPiece].filter(p => p !== null));
 
-            const fen = Chess.boardToFEN(game.board, true, piece, game.currPlayer === 'white' ? 'black' : 'white', data.newI, data.newJ, true, game.noCaptureOrPawnsQ, game.movements);
+            const fen = Chess.boardToFEN(game.board, false, piece, game.currPlayer === 'white' ? 'black' : 'white', data.newI, data.newJ, true, game.noCaptureOrPawnsQ, game.movements);
 
             game.fen.push(fen);
 
@@ -481,13 +481,11 @@ export default function ws(server: Server): void {
         },
 
         async approveUndo(socket: Socket) {
-            console.log(socket);
             const game = games.get(socket.gameID);
             if (!game) {
                 return;
             }
 
-            console.log(game.fen[game.currMove - 1]);
             boardAt(game, game.currMove - 1);
             game.movements.pop();
             game.fen.pop();
