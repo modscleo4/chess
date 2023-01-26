@@ -27,7 +27,7 @@ const Router = new RouterWrapper();
  * Define your routes here
  * Use the Router.get(), Router.post(), Router.put(), Router.patch(), Router.delete() methods to define your routes
  * Use the Router.group() method to group routes under a common prefix
- * Use the Router.usePublicPath() method to define a public path to serve static files from
+ * Use the Router.route() method to define a route using a custom HTTP method
  */
 
 Router.get('/login', AuthHandler.Login).withName('auth.login');

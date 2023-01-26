@@ -33,30 +33,30 @@
   },
   "homepage": "modscleo4.dev.br/chess",
   "dependencies": {
-    "@prisma/client": "^4.5.0",
+    "@prisma/client": "^4.9.0",
     "dotenv": "^16.0.3",
-    "midori": "github:modscleo4/midori#jwe",
-    "prisma": "^4.5.0",
+    "midori": "github:modscleo4/midori",
+    "prisma": "^4.9.0",
     "stockfish-nnue.wasm": "^1.0.0-1946a675.smolnet",
     "stockfish.wasm": "^0.10.0",
-    "ws": "^8.10.0"
+    "ws": "^8.12.0"
   },
   "devDependencies": {
-    "@types/node": "^18.11.7",
-    "@types/ws": "^8.5.3",
+    "@types/node": "^18.11.18",
+    "@types/ws": "^8.5.4",
     "nodemon": "^2.0.20",
     "ts-node": "^10.9.1",
-    "tsconfig-paths": "^4.1.0",
-    "ttypescript": "^1.5.13",
-    "typescript": "^4.8.4",
-    "typescript-transform-paths": "^3.3.1"
+    "tsconfig-paths": "^4.1.2",
+    "ttypescript": "^1.5.15",
+    "typescript": "^4.9.4",
+    "typescript-transform-paths": "^3.4.6"
   },
   "engines": {
     "node": ">=18",
     "npm": ">=8"
   },
   "optionalDependencies": {
-    "bufferutil": "^4.0.6",
+    "bufferutil": "^4.0.7",
     "utf-8-validate": "^5.0.9"
   }
 }

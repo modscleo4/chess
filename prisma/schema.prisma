@@ -14,17 +14,36 @@ model User {
   id        String    @id @db.Uuid
   username  String    @unique @db.VarChar(255)
   email     String    @unique @db.VarChar(255)
-  password  String    @db.VarChar(255)
+  password  String?   @db.VarChar(255)
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime? @updatedAt @map("updated_at")
+
+  games     Game[]
 
   @@map("users")
 }
 
 model Game {
   id        String    @id @db.Uuid
+  userId    String    @db.VarChar(255)
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime? @updatedAt @map("updated_at")
 
+  movements GameMovement[]
+  user      User      @relation(fields: [userId], references: [id])
+
   @@map("games")
+}
+
+model GameMovement {
+  id        String    @id @db.Uuid
+  gameId    String    @db.Uuid @map("game_id")
+  player    String    @db.VarChar(255)
+  movement  String    @db.VarChar(255)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  game Game @relation(fields: [gameId], references: [id])
+
+  @@map("game_movements")
 }

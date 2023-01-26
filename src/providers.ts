@@ -39,7 +39,7 @@ export default function providers(server: Server): void {
     server.install(LoggerServiceProviderFactory(new ConsoleLogger({ colorsEnabled: true, minLevel: LogLevel.DEBUG })));
 
     // Add providers here
-    // Recover the provider with server.services.get(ServiceProvider) in your handlers and middleware constructors
+    // Recover the provider with app.services.get(ServiceProvider) in your handlers and middleware constructors
     server.install(JWTServiceProviderFactory(new JWT({ alg: process.env.JWS_ALGORITHM || 'HS256', secret: process.env.JWS_SECRET || 'secret', privateKeyFile: process.env.JWS_PRIVATE_KEY }, { alg: process.env.JWE_ALGORITHM || 'RSA-OAEP', enc: process.env.JWE_ENCRYPTION || 'A256GCM', secret: process.env.JWE_SECRET, privateKeyFile: process.env.JWE_PRIVATE_KEY || '' })));
     server.install(HashServiceProviderFactory(new Scrypt()));
     server.install(UserServiceProviderFactory(new PrismaUserService(server.services.get(HashServiceProvider))));

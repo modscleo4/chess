@@ -18,6 +18,9 @@ window.addEventListener('appinstalled', () => {
     console.log('A2HS installed');
 });
 
+const captureAudio = new Audio('assets/capture.ogg');
+const moveAudio = new Audio('assets/move.ogg');
+
 /**
  * @type {Worker|undefined}
  */
@@ -40,7 +43,7 @@ const app = Vue.createApp({
         },
         game: {
             start: false,
-            playerNames: {white: 'Brancas', black: 'Pretas'},
+            playerNames: { white: 'Brancas', black: 'Pretas' },
             gamemode: null,
             playerColor: 'white',
             currPlayer: 'white',
@@ -308,7 +311,7 @@ const app = Vue.createApp({
             });
         },
 
-        openModal({type, title, body, primaryButton, closeButton = 'Fechar', onClose = () => { }, onCancel = () => { }, beforeOpen = () => { }}) {
+        openModal({ type, title, body, primaryButton, closeButton = 'Fechar', onClose = () => { }, onCancel = () => { }, beforeOpen = () => { } }) {
             let interval;
 
             const open = () => {
@@ -326,7 +329,7 @@ const app = Vue.createApp({
 
                 beforeOpen();
 
-                const modal = new bootstrap.Modal('#modal', {keyboard: true});
+                const modal = new bootstrap.Modal('#modal', { keyboard: true });
                 modal.show();
             };
 
@@ -334,11 +337,11 @@ const app = Vue.createApp({
         },
 
         alert(body, title = 'Alerta', onClose = () => { }) {
-            this.openModal({type: 'alert', title, body, primaryButton: 'OK', onClose});
+            this.openModal({ type: 'alert', title, body, primaryButton: 'OK', onClose });
         },
 
         confirm(body, title = 'Confirmação', onClose = () => { }, onCancel = () => { }) {
-            this.openModal({type: 'confirm', title, body, primaryButton: 'Sim', closeButton: 'Não', onClose, onCancel});
+            this.openModal({ type: 'confirm', title, body, primaryButton: 'Sim', closeButton: 'Não', onClose, onCancel });
         },
 
         changeUsername() {
@@ -371,7 +374,7 @@ const app = Vue.createApp({
         },
 
         matchHistory() {
-            const matchHistory = JSON.parse(localStorage.getItem('gameHistory')).map(a => ({...a, date: new Date(a.date)})).sort((a, b) => b.date - a.date);
+            const matchHistory = JSON.parse(localStorage.getItem('gameHistory')).map(a => ({ ...a, date: new Date(a.date) })).sort((a, b) => b.date - a.date);
             return matchHistory;
         },
 
@@ -388,11 +391,11 @@ const app = Vue.createApp({
                 return;
             }
 
-            worker = new Worker('js/engine.worker.js', {type: "module"});
+            worker = new Worker('js/engine.worker.js', { type: "module" });
 
             worker.addEventListener('message', e => {
                 const [score, move, d] = e.data;
-                this.scores[this.game.currMove] = {score: score === Infinity ? '∞' : score === -Infinity ? '-∞' : score, depth: d, bestMove: null};
+                this.scores[this.game.currMove] = { score: score === Infinity ? '∞' : score === -Infinity ? '-∞' : score, depth: d, bestMove: null };
                 move && this.drawBestMove(move.i, move.j, move.newI, move.newJ, this.game.playerColor);
             }, false);
         },
@@ -492,10 +495,10 @@ const app = Vue.createApp({
                         return;
                     }
 
-                    if (move?.Depth) {this.currDepth = parseInt(move.Depth);}
-                    if (move?.Score) {this.scores[this.game.currMove] = {d: this.currDepth, bestMove: null};}
-                    if (move?.Score && move?.ScoreEval) {this.scores[this.game.currMove] = {...this.scores[this.game.currMove], score: move.Score === 'mate' ? `#${mult * parseInt(move?.ScoreEval)}` : mult * parseFloat(move.ScoreEval) / 100};}
-                    if (move) {this.drawBestMove(8 - parseInt(move.I), 'abcdefgh'.indexOf(move.J), 8 - parseInt(move.NewI), 'abcdefgh'.indexOf(move.NewJ), this.game.playerColor);}
+                    if (move?.Depth) { this.currDepth = parseInt(move.Depth); }
+                    if (move?.Score) { this.scores[this.game.currMove] = { d: this.currDepth, bestMove: null }; }
+                    if (move?.Score && move?.ScoreEval) { this.scores[this.game.currMove] = { ...this.scores[this.game.currMove], score: move.Score === 'mate' ? `#${mult * parseInt(move?.ScoreEval)}` : mult * parseFloat(move.ScoreEval) / 100 }; }
+                    if (move) { this.drawBestMove(8 - parseInt(move.I), 'abcdefgh'.indexOf(move.J), 8 - parseInt(move.NewI), 'abcdefgh'.indexOf(move.NewJ), this.game.playerColor); }
 
                     if (this.scores[this.game.currMove]) {
                         this.updatePercentage();
@@ -524,7 +527,7 @@ const app = Vue.createApp({
 
         scrollToResult() {
             setTimeout(() => {
-                document.querySelector('.sidebar-right .history .movement.current')?.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+                document.querySelector('.sidebar-right .history .movement.current')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }, 100);
         },
 
@@ -561,7 +564,7 @@ const app = Vue.createApp({
 
             if (['sp', 'smp', 'mp', 'spec'].includes(this.game.gamemode) && this.game.movements.length > 0) {
                 const games = JSON.parse(localStorage.getItem('gameHistory') ?? '[]');
-                games.push({date: new Date(), won: this.game.won, draw: this.game.draw, gamemode: this.game.gamemode, movements: this.game.movements, result: this.game.result});
+                games.push({ date: new Date(), won: this.game.won, draw: this.game.draw, gamemode: this.game.gamemode, movements: this.game.movements, result: this.game.result });
 
                 localStorage.setItem('gameHistory', JSON.stringify(games));
             }
@@ -576,8 +579,8 @@ const app = Vue.createApp({
             this.game.gamemode = null;
             this.game.won = null;
             this.game.draw = false;
-            this.game.playerNames = {white: 'Brancas', black: 'Pretas'},
-            this.game.playerColor = 'white';
+            this.game.playerNames = { white: 'Brancas', black: 'Pretas' },
+                this.game.playerColor = 'white';
             this.game.currPlayer = 'white';
             this.game.timePlayer = 10;
             this.game.timeInc = 5;
@@ -654,15 +657,15 @@ const app = Vue.createApp({
 
             if (!['smp', 'mp', 'settings'].includes(this.game.gamemode)) this.sendUCI(`setoption name Threads value ${this.config.threads}`);
             if (!['smp', 'mp', 'settings'].includes(this.game.gamemode)) this.sendUCI(`setoption name Hash value ${this.config.hash}`);
-            if (['sp'].includes(this.game.gamemode)) {this.sendUCI(`setoption name UCI_Elo value ${this.config.engineElo}`); this.sendUCI('setoption name UCI_AnalyseMode value false');}
-            if (['sp'].includes(this.game.gamemode) && this.game.playerColor === 'black') {this.sendToEngine(true);}
-            if (['spec', 'analysis'].includes(this.game.gamemode)) {this.sendUCI(`setoption name UCI_Elo value ${this.engine.options['UCI_Elo'].max}`); this.sendUCI('setoption name UCI_AnalyseMode value true');}
+            if (['sp'].includes(this.game.gamemode)) { this.sendUCI(`setoption name UCI_Elo value ${this.config.engineElo}`); this.sendUCI('setoption name UCI_AnalyseMode value false'); }
+            if (['sp'].includes(this.game.gamemode) && this.game.playerColor === 'black') { this.sendToEngine(true); }
+            if (['spec', 'analysis'].includes(this.game.gamemode)) { this.sendUCI(`setoption name UCI_Elo value ${this.engine.options['UCI_Elo'].max}`); this.sendUCI('setoption name UCI_AnalyseMode value true'); }
 
             if (['sp'].includes(this.game.gamemode)) {
                 if (this.game.playerColor === 'white') {
-                    this.game.playerNames = {white: 'Você', black: 'Engine'};
+                    this.game.playerNames = { white: 'Você', black: 'Engine' };
                 } else {
-                    this.game.playerNames = {white: 'Engine', black: 'Você'};
+                    this.game.playerNames = { white: 'Engine', black: 'Você' };
                 }
             }
 
@@ -675,10 +678,10 @@ const app = Vue.createApp({
             this.game.timePlayer = Infinity;
 
             game.movements.forEach(movement => {
-                const {i, j, newI, newJ, promoteTo} = Chess.pgnToCoord(movement, this.game.board, this.game.currPlayer, this.game.lastMoved);
+                const { i, j, newI, newJ, promoteTo } = Chess.pgnToCoord(movement, this.game.board, this.game.currPlayer, this.game.lastMoved);
 
                 this.game.promoteTo = promoteTo;
-                this.commitMovement(i, j, newI, newJ, {checkValid: false, playSound: false, scrollToMovement: false});
+                this.commitMovement(i, j, newI, newJ, { checkValid: false, playSound: false, scrollToMovement: false });
             });
 
             this.game.currMove = game.movements.length - 1;
@@ -730,10 +733,10 @@ const app = Vue.createApp({
             this.regenerateArray(this.game.fen[n]);
             this.game.currentMove = [];
 
-            const {i, j, newI, newJ, promoteTo} = Chess.pgnToCoord(this.game.movements[n], this.game.board, this.game.currPlayer, this.game.lastMoved);
+            const { i, j, newI, newJ, promoteTo } = Chess.pgnToCoord(this.game.movements[n], this.game.board, this.game.currPlayer, this.game.lastMoved);
 
             this.game.promoteTo = promoteTo;
-            this.commitMovement(i, j, newI, newJ, {checkValid: false, saveMovement: false});
+            this.commitMovement(i, j, newI, newJ, { checkValid: false, saveMovement: false });
             this.game.currMove = n;
 
             if (!override && this.game._board && this.game.movements.length - 1 === n) {
@@ -760,9 +763,9 @@ const app = Vue.createApp({
                         this.game._board = null;
                     }
 
-                    const {i, j, newI, newJ, game: {currPlayer, promoteTo, player1Timer, player2Timer}} = message;
+                    const { i, j, newI, newJ, game: { currPlayer, promoteTo, player1Timer, player2Timer } } = message;
                     this.game.promoteTo = promoteTo;
-                    this.commitMovement(i, j, newI, newJ, {checkValid: false});
+                    this.commitMovement(i, j, newI, newJ, { checkValid: false });
 
                     this.game.currPlayer = currPlayer;
 
@@ -775,7 +778,7 @@ const app = Vue.createApp({
                 },
 
                 createGame: async (message) => {
-                    const {gameid, game: {playerColor, currPlayer, secret}} = message;
+                    const { gameid, game: { playerColor, currPlayer, secret } } = message;
 
                     this.connection.gameid = gameid;
                     this.game.currPlayer = currPlayer;
@@ -785,15 +788,15 @@ const app = Vue.createApp({
                 },
 
                 joinGame: async (message) => {
-                    const {game: {timePlayer, timeInc, movements, playerColor, currPlayer, player1Timer, player2Timer, secret}} = message;
+                    const { game: { timePlayer, timeInc, movements, playerColor, currPlayer, player1Timer, player2Timer, secret } } = message;
 
                     this.game.playerColor = this.game.currPlayer = 'white';
 
                     this.game.timePlayer = timePlayer === -1 ? Infinity : timePlayer;
                     this.game.timeInc = timeInc;
 
-                    movements.forEach(({i, j, newI, newJ}) => {
-                        this.commitMovement(i, j, newI, newJ, {checkValid: false, playSound: false});
+                    movements.forEach(({ i, j, newI, newJ }) => {
+                        this.commitMovement(i, j, newI, newJ, { checkValid: false, playSound: false });
                     });
 
                     const lastMovement = movements[movements.length - 1];
@@ -813,14 +816,14 @@ const app = Vue.createApp({
                 },
 
                 start: async (message) => {
-                    const {game: {player1Name, player2Name}} = message;
+                    const { game: { player1Name, player2Name } } = message;
                     this.connection.canStart = true;
 
-                    this.game.playerNames = {white: player1Name, black: player2Name};
+                    this.game.playerNames = { white: player1Name, black: player2Name };
                 },
 
                 gameNotFound: async (message) => {
-                    const {gameid} = message;
+                    const { gameid } = message;
 
                     this.alert(`Jogo ${gameid} não encontrado.`);
                     this.reset();
@@ -829,7 +832,7 @@ const app = Vue.createApp({
                 },
 
                 gameFull: async (message) => {
-                    const {gameid} = message;
+                    const { gameid } = message;
 
                     this.alert(`O jogo ${gameid} está cheio.`);
                     this.reset();
@@ -838,7 +841,7 @@ const app = Vue.createApp({
                 },
 
                 alreadyConnected: async (message) => {
-                    const {gameid} = message;
+                    const { gameid } = message;
 
                     this.alert(`Você já está no jogo ${gameid}.`);
                     this.reset();
@@ -863,7 +866,7 @@ const app = Vue.createApp({
                 },
 
                 forfeit: async (message) => {
-                    const {won} = message;
+                    const { won } = message;
 
                     this.forfeit(won);
                 },
@@ -883,7 +886,7 @@ const app = Vue.createApp({
                 },
 
                 changeUsername: async (message) => {
-                    const {player1Name, player1Color, player2Name, player2Color} = message;
+                    const { player1Name, player1Color, player2Name, player2Color } = message;
 
                     this.game.playerNames[player1Color] = player1Name;
                     this.game.playerNames[player2Color] = player2Name;
@@ -1189,7 +1192,7 @@ const app = Vue.createApp({
          * @param {boolean} [options.playSound=true]
          * @param {boolean} [options.scrollToMovement=true]
          */
-        commitMovement(i, j, newI, newJ, {checkValid = true, saveMovement = true, playSound = true, scrollToMovement = true} = {}) {
+        commitMovement(i, j, newI, newJ, { checkValid = true, saveMovement = true, playSound = true, scrollToMovement = true } = {}) {
             const piece = this.game.board[i][j];
             if (!piece) {
                 debugger;
@@ -1207,10 +1210,10 @@ const app = Vue.createApp({
                 return;
             }
 
-            const {capture = false, enPassant = false, promotion = false, castling = 0, check = false, takenPiece = null} = move;
+            const { capture = false, enPassant = false, promotion = false, castling = 0, check = false, takenPiece = null } = move;
 
-            const {piece: KingW} = Chess.findPiece(this.game.board, (p => p?.char === 'K' && p?.color === 'white'));
-            const {piece: KingB} = Chess.findPiece(this.game.board, (p => p?.char === 'K' && p?.color === 'black'));
+            const { piece: KingW } = Chess.findPiece(this.game.board, (p => p?.char === 'K' && p?.color === 'white'));
+            const { piece: KingB } = Chess.findPiece(this.game.board, (p => p?.char === 'K' && p?.color === 'black'));
 
             KingW && (KingW.checked = (this.game.currPlayer === 'black' && check));
             KingB && (KingB.checked = (this.game.currPlayer === 'white' && check));
@@ -1218,8 +1221,7 @@ const app = Vue.createApp({
             saveMovement && this.game.takenPieces.push([...(this.game.takenPieces[this.game.takenPieces.length - 1] ?? []), takenPiece].filter(p => p !== null));
 
             if (playSound) {
-                const audio = new Audio(capture ? 'assets/capture.ogg' : 'assets/move.ogg');
-                audio.play();
+                capture ? captureAudio.play() : moveAudio.play();
             }
 
             if (saveMovement) {
@@ -1228,7 +1230,7 @@ const app = Vue.createApp({
                 this.game.fen.push(fen);
             }
 
-            const {won, draw, result, reason} = Chess.result(this.game.board, this.game.currPlayer, this.game.lastMoved, this.game.noCaptureOrPawnsQ, this.game.fen);
+            const { won, draw, result, reason } = Chess.result(this.game.board, this.game.currPlayer, this.game.lastMoved, this.game.noCaptureOrPawnsQ, this.game.fen);
             this.game.won = won;
             this.game.draw = draw;
             result && (this.game.result = result);
@@ -1377,7 +1379,7 @@ const app = Vue.createApp({
                 return;
             }
 
-            const {bestMove} = this.scores[this.game.currMove];
+            const { bestMove } = this.scores[this.game.currMove];
             if (bestMove?.i === i && bestMove?.j === j && bestMove?.newI === newI && bestMove?.newJ === newJ) {
                 return;
             }
@@ -1403,7 +1405,7 @@ const app = Vue.createApp({
             const x2 = Math.floor(Math.floor(cell2?.left) - Math.floor(table?.left) + (Math.floor(cell2?.width) ?? 0) / 2);
             const y2 = Math.floor(Math.floor(cell2?.top) - Math.floor(table?.top) + (Math.floor(cell2?.height) ?? 0) / 2);
 
-            this.scores[this.game.currMove].bestMove = {i, j, newI, newJ, x1, y1, x2, y2};
+            this.scores[this.game.currMove].bestMove = { i, j, newI, newJ, x1, y1, x2, y2 };
         },
 
         /**
@@ -1412,7 +1414,7 @@ const app = Vue.createApp({
          * @param {string} reason
          */
         result(result, reason) {
-            this.alert(reason, result, () => {this.reset();});
+            this.alert(reason, result, () => { this.reset(); });
         },
 
         requestUndo() {
@@ -1498,7 +1500,7 @@ const app = Vue.createApp({
 
             const color = this.alt ? 'b' : this.shift ? 'r' : 'g';
 
-            this.annotationPreview = {x1: this.mouse.x1, y1: this.mouse.y1, x2: this.mouse.x1, y2: this.mouse.y1, color};
+            this.annotationPreview = { x1: this.mouse.x1, y1: this.mouse.y1, x2: this.mouse.x1, y2: this.mouse.y1, color };
         },
 
         moveArrow(i, j) {
@@ -1524,7 +1526,7 @@ const app = Vue.createApp({
 
             const color = this.annotationPreview.color;
 
-            this.annotationPreview = {x1: this.mouse.x1, y1: this.mouse.y1, x2: this.mouse.x2, y2: this.mouse.y2, color};
+            this.annotationPreview = { x1: this.mouse.x1, y1: this.mouse.y1, x2: this.mouse.x2, y2: this.mouse.y2, color };
         },
 
         endArrow(i, j) {
@@ -1546,12 +1548,12 @@ const app = Vue.createApp({
             }
 
             let annotation;
-            if (annotation = this.annotations.find(({x1, y1, x2, y2, color: c}) => x1 === this.mouse.x1 && y1 === this.mouse.y1 && x2 === this.mouse.x2 && y2 === this.mouse.y2 && color === c)) {
+            if (annotation = this.annotations.find(({ x1, y1, x2, y2, color: c }) => x1 === this.mouse.x1 && y1 === this.mouse.y1 && x2 === this.mouse.x2 && y2 === this.mouse.y2 && color === c)) {
                 this.annotations.splice(this.annotations.indexOf(annotation), 1);
-            } else if (annotation = this.annotations.find(({x1, y1, x2, y2, color: c}) => x1 === this.mouse.x1 && y1 === this.mouse.y1 && x2 === this.mouse.x2 && y2 === this.mouse.y2 && color !== c)) {
+            } else if (annotation = this.annotations.find(({ x1, y1, x2, y2, color: c }) => x1 === this.mouse.x1 && y1 === this.mouse.y1 && x2 === this.mouse.x2 && y2 === this.mouse.y2 && color !== c)) {
                 annotation.color = color;
             } else {
-                this.annotations.push({x1: this.mouse.x1, y1: this.mouse.y1, x2: this.mouse.x2, y2: this.mouse.y2, color});
+                this.annotations.push({ x1: this.mouse.x1, y1: this.mouse.y1, x2: this.mouse.x2, y2: this.mouse.y2, color });
             }
 
             this.mouseRight = false;
@@ -1605,7 +1607,7 @@ const app = Vue.createApp({
             this.playerName = localStorage.getItem('playerName');
         },
 
-        tryLogin() {
+        /*tryLogin() {
             const user = localStorage.getItem('oauth_user');
             if (user) {
                 this.user = JSON.parse(user);
@@ -1614,6 +1616,6 @@ const app = Vue.createApp({
             } else if (localStorage.getItem('logged')) {
                 this.login();
             }
-        },
+        },*/
     },
 }).mount('#app');
