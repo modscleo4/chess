@@ -47,6 +47,14 @@
 
                             <input v-if="modal?.type === 'prompt'" type="text" class="form-control"
                                    v-model="modal.inputValue" />
+
+                            <div v-if="modal?.type === 'select'">
+                                <select class="form-control" v-model="modal.inputValue">
+                                    <option v-for="option in modal.options" :value="option.value">
+                                        {{ option.label }}
+                                    </option>
+                                </select>
+                            </div>
                         </div>
                         <div class="modal-footer border-0">
                             <button v-if="modal?.type === 'confirm'" type="button" @click="modal?.cancelOnClick"
@@ -65,22 +73,27 @@
             <a href="#" @click="reset();">
                 <h1>Chess.js</h1>
             </a>
-            <div class="dropdown">
+            <div v-if="playerName" class="dropdown">
                 <button type="button" class="btn btn-secondary dropdown-toggle player" id="dropdownMenuPlayer"
                         data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="fa fa-user-circle icon"></i>&nbsp;
                     <span class="name">{{ playerName ?? '<Player>' }}</span>
                 </button>
                 <ul class="dropdown-menu" aria-labelledby="dropdownMenuPlayer">
-                    <li><a class="dropdown-item" href="#" @click="changeUsername();">Alterar Nome</a></li>
+                    <li v-if="!user"><a class="dropdown-item" href="#" @click="login()">Login</a></li>
+                    <li v-if="!user"><a class="dropdown-item" href="#" @click="changeUsername();">Alterar Nome</a></li>
                     <li v-if="!game.start"><a class="dropdown-item" href="#"
                            @click="selectMode = false; selectVariant = false; createGame = false; game.gamemode = 'history';">Histórico
                             de Partidas</a></li>
                     <li><a class="dropdown-item" href="#"
                            @click="sidebarOpened = true;">Configurações</a>
                     </li>
+                    <li v-if="user"><a class="dropdown-item" href="#" @click="logout()">Sair</a></li>
                 </ul>
             </div>
+            <button v-else class="btn btn-secondary">
+                <span class="name" @click="login()">Login</span>
+            </button>
         </header>
 
         <nav id="sidebar-nav" class="sidebar sidebar-right center" :class="{'open': sidebarOpened}">
@@ -101,6 +114,19 @@
                                    class="form-control form-control-color form-control-sm" type="color"
                                    v-model="config.colorOdd"
                                    required />
+                        </div>
+                    </div>
+
+                    <div class="row mb-3 justify-content-center">
+                        <div class="col-auto">
+                            <select name="pieceTheme" id="inputPieceTheme" class="form-control form-control-sm" v-model="config.pieceTheme">
+                                <option value="cburnett">cburnett</option>
+                                <option value="staunty">staunty</option>
+                            </select>
+                        </div>
+
+                        <div class="col-auto">
+                             <img :src="`assets/${config.pieceTheme}/KnightW.svg`" style="width: 32px" alt="White Knight">
                         </div>
                     </div>
                 </fieldset>
@@ -143,7 +169,7 @@
         <div v-if="!game.start" class="mainMenu">
             <div class="gamemodes" v-if="!game.gamemode">
                 <button v-if="analysisEnabled" type="button" class="btn btn-secondary" :disabled="!engine.loaded"
-                        @click="game.gamemode = 'sp'; selectMode = false; selectVariant = true; createGame = true;">
+                        @click="game.gamemode = 'sp'; selectMode = false; selectVariant = true; createGame = true; createTooltips();">
                     Singleplayer (vs Engine)</button>
                 <button type="button" class="btn btn-primary"
                         @click="game.gamemode = 'smp'; selectMode = false; selectVariant = true; createGame = true;">
@@ -155,7 +181,7 @@
 
             <div v-if="selectMode" class="hidden mode-selector" :class="{visible: true}">
                 <button type="button" class="btn btn-success"
-                        @click="connection.gameid = null; game.gamemode = 'mp'; selectMode = false; selectVariant = true; createGame = true;">
+                        @click="connection.gameid = null; game.gamemode = 'mp'; selectMode = false; selectVariant = true; createGame = true; createTooltips();">
                     Criar Novo Jogo</button>
                 <button type="button" class="btn btn-info"
                         @click="selectMode = false; game.gamemode = 'mp'; selectVariant = true; createGame = false; loadOnlineGames(true);">
@@ -177,21 +203,86 @@
                                v-model="connection.gameid" required />
                     </div>
 
-                    <div v-if="game.gamemode === 'sp'" class="form-group mb-3 ">
+                    <div v-if="game.gamemode === 'sp'" class="form-group mb-3">
                         <label for="inputEngineElo">Elo da Engine</label>
-                        <input id="inputEngineElo" name="engineElo" class="form-control form-control-sm" type="number"
-                               v-model="config.engineElo" :min="engine.options['UCI_Elo']?.min ?? 300"
-                               :max="engine.options['UCI_Elo']?.max ?? 3200" required />
+                        <input id="inputEngineElo" name="engineElo" class="form-control form-range form-control-sm" type="range"
+                               step="5" :min="engine.options['UCI_Elo']?.min ?? 300"
+                               :max="engine.options['UCI_Elo']?.max ?? 3200" v-model="config.engineElo" :title="config.engineElo"
+                               @mouseover="reloadSliderTooltip($event.target, 10)"
+                               @input="reloadSliderTooltip($event.target)" data-bs-toggle="tooltip"
+                               data-bs-placement="top" required />
                     </div>
 
-                    <div v-if="game.gamemode !== 'spec' && createGame" class="form-group mb-3">
+                    <div v-if="createGame" class="times mb-3">
+                        <button type="button" class="btn" @click="game.timeCustom = false; game.timePlayer = 1; game.timeInc = 0;"
+                                :class="[!game.timeCustom && game.timePlayer === 1 && game.timeInc === 0 ? 'active btn-primary' : 'btn-secondary']">
+                            <h5>1 + 0</h5>
+                            <p class="m-0">Bullet</p>
+                        </button>
+                        <button type="button" class="btn" @click="game.timeCustom = false; game.timePlayer = 2; game.timeInc = 1;"
+                                :class="[!game.timeCustom && game.timePlayer === 2 && game.timeInc === 1 ? 'active btn-primary' : 'btn-secondary']">
+                            <h5>2 + 1</h5>
+                            <p class="m-0">Bullet</p>
+                        </button>
+                        <button type="button" class="btn" @click="game.timeCustom = false; game.timePlayer = 3; game.timeInc = 0;"
+                                :class="[!game.timeCustom && game.timePlayer === 3 && game.timeInc === 0 ? 'active btn-primary' : 'btn-secondary']">
+                            <h5>3 + 0</h5>
+                            <p class="m-0">Blitz</p>
+                        </button>
+                        <button type="button" class="btn" @click="game.timeCustom = false; game.timePlayer = 3; game.timeInc = 2;"
+                                :class="[!game.timeCustom && game.timePlayer === 3 && game.timeInc === 2 ? 'active btn-primary' : 'btn-secondary']">
+                            <h5>3 + 2</h5>
+                            <p class="m-0">Blitz</p>
+                        </button>
+                        <button type="button" class="btn" @click="game.timeCustom = false; game.timePlayer = 5; game.timeInc = 0;"
+                                :class="[!game.timeCustom && game.timePlayer === 5 && game.timeInc === 0 ? 'active btn-primary' : 'btn-secondary']">
+                            <h5>5 + 0</h5>
+                            <p class="m-0">Blitz</p>
+                        </button>
+                        <button type="button" class="btn" @click="game.timeCustom = false; game.timePlayer = 5; game.timeInc = 3;"
+                                :class="[!game.timeCustom && game.timePlayer === 5 && game.timeInc === 3 ? 'active btn-primary' : 'btn-secondary']">
+                            <h5>5 + 3</h5>
+                            <p class="m-0">Blitz</p>
+                        </button>
+                        <button type="button" class="btn" @click="game.timeCustom = false; game.timePlayer = 10; game.timeInc = 0;"
+                                :class="[!game.timeCustom && game.timePlayer === 10 && game.timeInc === 0 ? 'active btn-primary' : 'btn-secondary']">
+                            <h5>10 + 0</h5>
+                            <p class="m-0">Rápida</p>
+                        </button>
+                        <button type="button" class="btn" @click="game.timeCustom = false; game.timePlayer = 10; game.timeInc = 5;"
+                                :class="[!game.timeCustom && game.timePlayer === 10 && game.timeInc === 5 ? 'active btn-primary' : 'btn-secondary']">
+                            <h5>10 + 5</h5>
+                            <p class="m-0">Rápida</p>
+                        </button>
+                        <button type="button" class="btn" @click="game.timeCustom = false; game.timePlayer = 15; game.timeInc = 10;"
+                                :class="[!game.timeCustom && game.timePlayer === 15 && game.timeInc === 10 ? 'active btn-primary' : 'btn-secondary']">
+                            <h5>15 + 10</h5>
+                            <p class="m-0">Rápida</p>
+                        </button>
+                        <button type="button" class="btn" @click="game.timeCustom = false; game.timePlayer = 30; game.timeInc = 0;"
+                                :class="[!game.timeCustom && game.timePlayer === 30 && game.timeInc === 0 ? 'active btn-primary' : 'btn-secondary']">
+                            <h5>30 + 0</h5>
+                            <p class="m-0">Clássico</p>
+                        </button>
+                        <button type="button" class="btn" @click="game.timeCustom = false; game.timePlayer = 30; game.timeInc = 20;"
+                                :class="[!game.timeCustom && game.timePlayer === 30 && game.timeInc === 20 ? 'active btn-primary' : 'btn-secondary']">
+                            <h5>30 + 20</h5>
+                            <p class="m-0">Clássico</p>
+                        </button>
+                        <button type="button" class="btn" @click="game.timeCustom = true;"
+                                :class="[game.timeCustom ? 'active btn-primary' : 'btn-secondary']">
+                            <i class="fa fa-sliders"></i>
+                        </button>
+                    </div>
+
+                    <div v-if="game.timeCustom && game.gamemode !== 'spec' && createGame" class="form-group mb-3">
                         <label for="inputTimePlayer">Tempo para jogadas (-1 = Infinito)</label>
                         <input id="inputTimePlayer" name="timePlayer" class="form-control form-control-sm" type="number"
                                step="1"
                                min="-1" max="180" v-model.number="game.timePlayer" required />
                     </div>
 
-                    <div v-if="game.gamemode !== 'spec' && createGame" class="form-group mb-3">
+                    <div v-if="game.timeCustom && game.gamemode !== 'spec' && createGame" class="form-group mb-3">
                         <label for="inputTimeInc">Tempo adicional</label>
                         <input id="inputTimeInc" name="timeInc" class="form-control form-control-sm" type="number"
                                step="1" min="0"
@@ -206,16 +297,16 @@
                         <div class="playerColor">
                             <button type="button" class="btn" @click="game.playerColor = 'white'"
                                     :class="[game.playerColor === 'white' ? 'active btn-primary' : 'btn-secondary']">
-                                <img src="assets/KingW.png" alt="White">
-                            </button>
-                            <button type="button" class="btn" @click="game.playerColor = 'black'"
-                                    :class="[game.playerColor === 'black' ? 'active btn-primary' : 'btn-secondary']">
-                                <img src="assets/KingB.png" alt="Black">
+                                <img :src="`assets/${config.pieceTheme}/KingW.svg`" alt="White">
                             </button>
                             <button type="button" class="btn random" @click="game.playerColor = 'random'"
                                     :class="[game.playerColor === 'random' ? 'active btn-primary' : 'btn-secondary']">
-                                <img src="assets/KingW.png" alt="White">
-                                <img src="assets/KingB.png" alt="Black">
+                                <img :src="`assets/${config.pieceTheme}/KingW.svg`" alt="White">
+                                <img :src="`assets/${config.pieceTheme}/KingB.svg`" alt="Black">
+                            </button>
+                            <button type="button" class="btn" @click="game.playerColor = 'black'"
+                                    :class="[game.playerColor === 'black' ? 'active btn-primary' : 'btn-secondary']">
+                                <img :src="`assets/${config.pieceTheme}/KingB.svg`" alt="Black">
                             </button>
                         </div>
                     </div>
@@ -265,7 +356,7 @@
                     <tbody>
                         <tr v-for="(game, i) in matchHistory()" :key="i">
                             <td>{{ i + 1 }}</td>
-                            <td>{{ new Date(game.date).toLocaleString() }}</td>
+                            <td>{{ game.date.toLocaleString() }}</td>
                             <td>
                                 {{ {sp: 'Singleplayer', smp: 'Multiplayer Local', mp: 'Multiplayer Online', spec: 'Online (assistida)'}[game.gamemode] }}
                             </td>
@@ -329,7 +420,7 @@
                                     @contextmenu.prevent
                                     @mousedown.right="startArrow(i, j, $event.shiftKey, $event.altKey)"
                                     @mousemove="moveArrow(i, j)" @mouseup.right="endArrow(i, j)">
-                                    <img v-if="board_cell" :src="`assets/${board_cell.image}.png`" alt=""
+                                    <img v-if="board_cell" :src="`assets/${config.pieceTheme}/${board_cell.image}.svg`" alt=""
                                          draggable="false">
                                     <span v-if="i === 7"
                                           class="file">{{ ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'][j] }}</span>
@@ -471,7 +562,7 @@
                                 <li v-for="(piece, i) in (game.playerColor === 'white' ? takenPiecesW() : takenPiecesB())"
                                     :key="i"
                                     :class="{separator: i > 0 && piece.char !== (game.playerColor === 'white' ? takenPiecesW() : takenPiecesB())[i -1].char}">
-                                    <img :src="`assets/${piece.image}.png`" alt="" />
+                                    <img :src="`assets/${config.pieceTheme}/${piece.image}.svg`" alt="" />
                                 </li>
 
                                 <li class="advantage">
@@ -501,7 +592,7 @@
                                 <li v-for="(piece, i) in (game.playerColor === 'white' ? takenPiecesB() : takenPiecesW())"
                                     :key="i"
                                     :class="{separator: i > 0 && piece.char !== (game.playerColor === 'white' ? takenPiecesB() : takenPiecesW())[i -1].char}">
-                                    <img :src="`assets/${piece.image}.png`" alt="" />
+                                    <img :src="`assets/${config.pieceTheme}/${piece.image}.svg`" alt="" />
                                 </li>
 
                                 <li class="advantage">{{ pointsAdvantage(game.playerColor) }}</li>
@@ -543,7 +634,7 @@
     <script type="text/javascript"
             src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.1.3/js/bootstrap.min.js"></script>
 
-    <script type="text/javascript" src="node_modules/stockfish.wasm/stockfish.js"></script>
+    <script type="text/javascript" src="assets/stockfish.wasm/stockfish.js"></script>
 
     <script type="module" src="js/main.js"></script>
 </body>
