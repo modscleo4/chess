@@ -15,23 +15,18 @@
  */
 
 import WebSocket, { WebSocketServer } from 'ws';
-import { randomBytes } from 'node:crypto';
 
 import { Server } from 'midori/app';
-import { Logger } from 'midori/log';
-import { LoggerServiceProvider } from 'midori/providers';
+import { JWTServiceProvider, LoggerServiceProvider } from 'midori/providers';
 
 import GamesServiceProvider from '@app/providers/GamesServiceProvider.js';
-import GamesService, { Game } from '@app/services/GamesService.js';
+import { Game } from '@app/services/GamesService.js';
 import * as Chess from '@core/lib/chess.js';
+import { generateUUID } from 'midori/util/uuid.js';
 
 type Socket = WebSocket & {
     gameID: string;
 };
-
-function randomString(n: number = 64): string {
-    return randomBytes(n).toString('hex');
-}
 
 function regenerateArray(game: Game, fen: string = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1') {
     game.lastMoved = null;
@@ -59,12 +54,26 @@ function boardAt(game: Game, n: number) {
     game.currMove = n;
 }
 
-export default function ws(server: Server): void {
-    const logger: Logger = server.services.get(LoggerServiceProvider);
-    const games: GamesService = server.services.get(GamesServiceProvider);
-    const ws = new WebSocketServer({ server });
+/**
+ * WebSocket
+ *
+ * Define your WebSocket handler here.
+ * Use the WebSocketServer class to create a WebSocket server and attach it to the application.
+ */
 
-    const commands: { [command: string]: (socket: Socket, data: any) => Promise<void> } = {
+export default function ws(server: Server): void {
+    const logger = server.services.get(LoggerServiceProvider);
+    const games = server.services.get(GamesServiceProvider);
+    const jwt = server.services.get(JWTServiceProvider);
+    const wss = new WebSocketServer({ server });
+
+    function generateToken() {
+        const id = generateUUID();
+
+        return jwt.encrypt(Buffer.from(JSON.stringify({ sub: id })), 'JWT');
+    }
+
+    const commands: { [command: string]: (socket: Socket, data: any) => Promise<void>; } = {
         async createGame(socket: Socket, data: { playerColor: string, timePlayer: number, timeInc: number, playerName: string; }) {
             data.timePlayer === -1 && (data.timePlayer = Infinity);
 
@@ -86,7 +95,7 @@ export default function ws(server: Server): void {
                 player1Timer: 0,
                 player1TimerFn: null,
                 player1Color: 'white',
-                player1Secret: (data.playerColor === 'white' && randomString()) || null,
+                player1Secret: (data.playerColor === 'white' && generateToken()) || null,
 
                 player2: (data.playerColor === 'black' && socket) || null,
                 player2Name: (data.playerColor === 'black' && data.playerName) || '',
@@ -94,7 +103,7 @@ export default function ws(server: Server): void {
                 player2Timer: 0,
                 player2TimerFn: null,
                 player2Color: 'black',
-                player2Secret: (data.playerColor === 'black' && randomString()) || null,
+                player2Secret: (data.playerColor === 'black' && generateToken()) || null,
 
                 lastRequestUndo: null,
                 lastRequestDraw: null,
@@ -135,7 +144,7 @@ export default function ws(server: Server): void {
             socket.gameID = gameid;
         },
 
-        async joinGame(socket: Socket, data: { gameid: string, playerName: string, secret: string }) {
+        async joinGame(socket: Socket, data: { gameid: string, playerName: string, secret: string; }) {
             const game = games.get(data.gameid);
 
             if (!game || game.result) {
@@ -160,12 +169,12 @@ export default function ws(server: Server): void {
                 game.player1 = socket;
                 game.player1Name = data.playerName;
                 game.player1Connected = true;
-                game.player1Secret = randomString();
+                game.player1Secret = generateToken();
             } else if (!game.player2Connected && (!game.player2Secret || game.player2Secret === data.secret)) {
                 game.player2 = socket;
                 game.player2Name = data.playerName;
                 game.player2Connected = true;
-                game.player2Secret = randomString();
+                game.player2Secret = generateToken();
             } else {
                 socket.send(JSON.stringify({
                     command: 'alreadyConnected',
@@ -229,7 +238,7 @@ export default function ws(server: Server): void {
             }
         },
 
-        async spectate(socket: Socket, data: { gameid: string }) {
+        async spectate(socket: Socket, data: { gameid: string; }) {
             const game = games.get(data.gameid);
 
             if (!game) {
@@ -270,7 +279,7 @@ export default function ws(server: Server): void {
             }
         },
 
-        async commitMovement(socket: Socket, data: { i: number, j: number, newI: number, newJ: number, promoteTo: 'Q' | 'R' | 'B' | 'N' }) {
+        async commitMovement(socket: Socket, data: { i: number, j: number, newI: number, newJ: number, promoteTo: 'Q' | 'R' | 'B' | 'N'; }) {
             const game = games.get(socket.gameID);
             if (!game) {
                 return;
@@ -304,7 +313,7 @@ export default function ws(server: Server): void {
 
             King && ((<Chess.King> King).checked = check);
 
-            game.takenPieces.push(<Chess.Piece[]> [...(game.takenPieces[game.takenPieces.length - 1] ?? []), takenPiece].filter(p => p !== null));
+            game.takenPieces.push(<Chess.Piece[]>[...(game.takenPieces[game.takenPieces.length - 1] ?? []), takenPiece].filter(p => p !== null));
 
             const fen = Chess.boardToFEN(game.board, false, piece, game.currPlayer === 'white' ? 'black' : 'white', data.newI, data.newJ, true, game.noCaptureOrPawnsQ, game.movements);
 
@@ -544,7 +553,7 @@ export default function ws(server: Server): void {
             let reason = 'requested';
             if (game.noCaptureOrPawnsQ === 100) {
                 reason = '50-moves';
-            } else if (Chess.threefoldRepetition(game.fen[game.fen.length - 1])) {
+            } else if (Chess.threefoldRepetition(game.fen)) {
                 reason = 'threefold';
             }
 
@@ -626,7 +635,7 @@ export default function ws(server: Server): void {
 
         },
 
-        async changeUsername(socket: Socket, data: { oldUsername: string, newUsername: string }) {
+        async changeUsername(socket: Socket, data: { oldUsername: string, newUsername: string; }) {
             const game = games.get(socket.gameID);
             if (!game) {
                 return;
@@ -668,7 +677,7 @@ export default function ws(server: Server): void {
         },
     };
 
-    ws.on('connection', async (socket: Socket) => {
+    wss.on('connection', async (socket: Socket) => {
         socket.on('close', () => {
             const game = games.get(socket.gameID);
 

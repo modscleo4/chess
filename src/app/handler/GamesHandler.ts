@@ -13,9 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Application, Server } from "midori/app";
-import { HTTPError } from "midori/errors";
-import { EStatusCode, Handler, Request, Response } from "midori/http";
+import { Application } from "midori/app";
+import { Handler, Request, Response } from "midori/http";
 
 import GamesServiceProvider from "@app/providers/GamesServiceProvider.js";
 import GamesService from "@app/services/GamesService.js";
@@ -40,8 +39,10 @@ export class Played extends Handler {
         const gamesFormatted = [];
         for (const [gameId, game] of this.#games) {
             if (
-                !(game.player1Name === username && game.player1Secret === secret
-                || game.player2Name === username && game.player2Secret === secret)
+                game.player1Name !== username
+                || game.player1Secret !== secret
+                || game.player2Name !== username
+                || game.player2Secret !== secret
             ) {
                 continue;
             }

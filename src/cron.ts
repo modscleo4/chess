@@ -1,5 +1,5 @@
 /**
- * Copyright 2022 Dhiego Cassiano Fogaça Barbosa
+ * Copyright 2023 Dhiego Cassiano Fogaça Barbosa
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-import { ServiceProvider, Application } from 'midori/app';
+import { Server } from "midori/app";
 
-import GamesService from '@app/services/GamesService.js';
+/**
+ * Cron Jobs
+ *
+ * Define your cron jobs here.
+ * Use the server.schedule() method to add cron jobs to the application.
+ */
 
-export default class GamesServiceProvider extends ServiceProvider<GamesService> {
-    static service: string = 'ChessGames';
+export default function cron(server: Server): void {
 
-    register(app: Application): GamesService {
-        return new GamesService();
-    }
 }

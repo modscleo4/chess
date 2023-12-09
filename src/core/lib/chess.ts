@@ -1,4 +1,4 @@
-import { replaceAt } from "./util.js";
+import { randomBetween, replaceAt } from "./util.js";
 
 export type Piece = {
     char: PieceChar;
@@ -299,7 +299,7 @@ export function insufficientMaterial(board: Board): boolean {
     return false;
 }
 
-export function threefoldRepetition(fen: string): boolean {
+export function threefoldRepetition(fen: string[]): boolean {
     if (fen.length >= 6) {
         const currMov = fen[fen.length - 1];
         let dup = 1;

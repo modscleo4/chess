@@ -9,12 +9,11 @@
   "main": "dist/server.js",
   "type": "module",
   "scripts": {
-    "build": "ttsc",
+    "build": "tspc",
     "clean": "tsc -b --clean",
     "dev": "nodemon --inspect src/server.ts",
     "start": "node .",
     "test": "ts-node-esm src/test/index.ts",
-    "cannon": "npx autocannon -c 500 -d 30 --renderStatusCodes --latency localhost:3000/bin",
     "generateKeys": "node ./bin/generateKeys.js"
   },
   "keywords": [
@@ -33,22 +32,23 @@
   },
   "homepage": "modscleo4.dev.br/chess",
   "dependencies": {
-    "@prisma/client": "^4.9.0",
+    "@prisma/client": "^4.12.0",
     "dotenv": "^16.0.3",
     "midori": "github:modscleo4/midori",
-    "prisma": "^4.9.0",
+    "midori-swaggerui": "github:modscleo4/midori-swaggerui",
+    "prisma": "^4.12.0",
     "stockfish-nnue.wasm": "^1.0.0-1946a675.smolnet",
     "stockfish.wasm": "^0.10.0",
     "ws": "^8.12.0"
   },
   "devDependencies": {
-    "@types/node": "^18.11.18",
+    "@types/node": "^18.15.11",
     "@types/ws": "^8.5.4",
-    "nodemon": "^2.0.20",
+    "nodemon": "^2.0.22",
     "ts-node": "^10.9.1",
-    "tsconfig-paths": "^4.1.2",
-    "ttypescript": "^1.5.15",
-    "typescript": "^4.9.4",
+    "ts-patch": "^3.1.1",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.0.3",
     "typescript-transform-paths": "^3.4.6"
   },
   "engines": {

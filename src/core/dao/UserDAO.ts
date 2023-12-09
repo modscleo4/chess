@@ -32,14 +32,12 @@ export default class UserDAO {
         return await prisma.user.findFirst(args);
     }
 
-    static async save(id: string, { username }: { username: string; }): Promise<User> {
+    static async save(id: string, data: PrismaDTO.UserUpdateInput): Promise<User> {
         return await prisma.user.update({
             where: {
                 id
             },
-            data: {
-                username,
-            }
+            data
         });
     }
 

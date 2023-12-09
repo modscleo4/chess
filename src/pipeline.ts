@@ -16,9 +16,9 @@
 
 import { Server } from "midori/app";
 import {
-    CORSMiddlewareFactory,
+    CORSMiddleware,
     DispatchMiddleware,
-    ErrorMiddlewareFactory,
+    ErrorMiddleware,
     ErrorLoggerMiddleware,
     HTTPErrorMiddleware,
     ImplicitHeadMiddleware,
@@ -28,9 +28,17 @@ import {
     ParseBodyMiddleware,
     PublicPathMiddlewareFactory,
     RequestLoggerMiddleware,
+    ResponseCompressionMiddleware,
     RouterMiddleware,
-    ResponseCompressionMiddlewareFactory,
 } from "midori/middlewares";
+
+/**
+ * Pipelining
+ *
+ * Define your pipeline here.
+ * Use the server.pipe() method to add middlewares to the pipeline.
+ * The order here matters, as the middlewares are chained in the same order they are added.
+ */
 
 export default function pipeline(server: Server): void {
     /**
@@ -40,12 +48,15 @@ export default function pipeline(server: Server): void {
      */
     server.pipe(RequestLoggerMiddleware);
 
+    // Add CORS headers to every response
+    server.pipe(CORSMiddleware);
+
     /**
      * Handle any uncaught Error during the request processing
      *
      * This middleware should be one of the first middlewares in the pipeline
      */
-    server.pipe(ErrorMiddlewareFactory({ exposeErrors: process.env.EXPOSE_ERRORS?.toUpperCase() === 'TRUE' }));
+    server.pipe(ErrorMiddleware);
 
     /**
      * Log every error using the Logger Service Provider
@@ -61,8 +72,7 @@ export default function pipeline(server: Server): void {
 
     // Add your own pre-processing middlewares here
     //
-    //server.pipe(ResponseCompressionMiddlewareFactory({ contentTypes: ['*/*'] }));
-    server.pipe(CORSMiddlewareFactory({ origin: '*', openerPolicy: 'same-origin', embedderPolicy: 'require-corp' }));
+    server.pipe(ResponseCompressionMiddleware);
 
     /**
      * Register the router middleware, which will handle all incoming requests
@@ -104,6 +114,6 @@ export default function pipeline(server: Server): void {
      * When no route matches the request, PublicPathMiddleware will try to find a matching file in the public directory.
      * The public directory is relative to the project root.
      */
-    !server.production && server.pipe(PublicPathMiddlewareFactory({ path: './public', cache: { maxAge: 604800 } }));
+    !server.production && server.pipe(PublicPathMiddlewareFactory({ path: './public' }));
     server.pipe(NotFoundMiddleware);
 }

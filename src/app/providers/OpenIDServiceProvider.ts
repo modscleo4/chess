@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-import OpenIDService from "@app/services/OpenIDService.js";
-import { Server, ServiceProvider } from "midori/app";
+import { Application, ServiceProvider } from "midori/app";
 import { Constructor } from "midori/util/types.js";
+
+import OpenIDService from "@app/services/OpenIDService.js";
 
 export abstract class OpenIDServiceProvider extends ServiceProvider<OpenIDService> {
     static service: string = 'OpenID';
@@ -24,7 +25,7 @@ export abstract class OpenIDServiceProvider extends ServiceProvider<OpenIDServic
 
 export default function (openIDService: OpenIDService): Constructor<OpenIDServiceProvider> & { [K in keyof typeof OpenIDServiceProvider]: typeof OpenIDServiceProvider[K] } {
     return class extends OpenIDServiceProvider {
-        register(server: Server): OpenIDService {
+        register(app: Application): OpenIDService {
             return openIDService;
         }
     };

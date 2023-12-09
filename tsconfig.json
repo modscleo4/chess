@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
         "moduleResolution": "NodeNext",
-        "module": "ESNext",
+        "module": "NodeNext",
         "target": "ESNext",
         "sourceMap": true,
         "outDir": "./dist",

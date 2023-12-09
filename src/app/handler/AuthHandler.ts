@@ -15,13 +15,15 @@
  */
 
 import { Application } from "midori/app";
-import { HTTPError } from "midori/errors";
-import { Hash } from "midori/hash";
-import { EStatusCode, Handler, Request, Response } from "midori/http";
+import { Auth } from "midori/auth";
+import { Handler, Request, Response } from "midori/http";
+import { JWT } from "midori/jwt";
+import { AuthServiceProvider, JWTServiceProvider } from "midori/providers";
+import { Payload } from "midori/util/jwt.js";
 import { generateUUID } from "midori/util/uuid.js";
 
 import UserDAO from "@core/dao/UserDAO.js";
-import { Auth } from "midori/auth";
+
 import { OpenIDServiceProvider } from "@app/providers/OpenIDServiceProvider.js";
 import OpenIDService from "@app/services/OpenIDService.js";
 
@@ -44,11 +46,13 @@ export class Login extends Handler {
 
 export class Callback extends Handler {
     #openID: OpenIDService;
+    #jwt: JWT;
 
     constructor(app: Application) {
         super(app);
 
         this.#openID = app.services.get(OpenIDServiceProvider);
+        this.#jwt = app.services.get(JWTServiceProvider);
     }
 
     async handle(req: Request): Promise<Response> {
@@ -89,8 +93,42 @@ export class Callback extends Handler {
             return Response.redirect('/');
         }
 
-        const user = await identity_response.json();
+        const OauthUser = await identity_response.json();
 
-        return Response.send(Buffer.from(`<script>localStorage.setItem('logged', 'true'); localStorage.setItem('oauth_user', '${JSON.stringify(user)}'); location.href = '/';</script>`));
+        const user = await UserDAO.create({
+            id: generateUUID(),
+            username: OauthUser.preferred_username,
+            password: null,
+            email: OauthUser.email,
+        });
+
+        const issuedAt = Date.now();
+        const expires = 1000 * 60 * 60 * 1; // 1 hour
+
+        const token = this.#jwt.sign(<Payload & { username: string; }> {
+            iss: "http://localhost:3000",
+            sub: user.id,
+            //exp: Math.ceil((issuedAt + expires) / 1000),
+            iat: Math.floor(issuedAt / 1000),
+            jti: generateUUID(),
+
+            username: user.username,
+        });
+
+        return Response.send(Buffer.from(`<script>localStorage.setItem('token', '${token}'); location.href = '/';</script>`));
+    }
+}
+
+export class User extends Handler {
+    #auth: Auth;
+
+    constructor(app: Application) {
+        super(app);
+
+        this.#auth = app.services.get(AuthServiceProvider);
+    }
+
+    async handle(req: Request): Promise<Response> {
+        return Response.json(this.#auth.user(req));
     }
 }
