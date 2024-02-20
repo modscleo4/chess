@@ -10,6 +10,13 @@
         "experimentalDecorators": true,
         "esModuleInterop": true,
         "baseUrl": ".",
+        "skipLibCheck": true,
+        "noImplicitReturns": true,
+        "noImplicitAny": true,
+        "noImplicitOverride": true,
+        "noImplicitThis": true,
+        "strictBindCallApply": true,
+        "strictNullChecks": true,
         "paths": {
             "@app/*": [
                 "./src/app/*"

@@ -16,13 +16,16 @@
 
 import { HTTPError } from "midori/errors";
 import { EStatusCode, Middleware, Request, Response } from "midori/http";
+import { AuthBearerMiddleware } from "midori/middlewares";
+import { Payload } from "midori/util/jwt.js";
 import { Constructor } from "midori/util/types.js";
 
 export default function OauthScopeMiddlewareFactory(options: { scopes: string[]; }): Constructor<Middleware> {
     return class extends Middleware {
-        async process(req: Request, next: (req: Request) => Promise<Response>): Promise<Response> {
-            if (req.container.get('::jwt')) {
-                const userScopes = (req.container.get('::jwt').scope ?? '').split(' ');
+        override async process(req: Request, next: (req: Request) => Promise<Response>): Promise<Response> {
+            const jwt = req.container.get(AuthBearerMiddleware.TokenKey) as (Payload & { username: string; scope: string; }) | undefined;
+            if (jwt) {
+                const userScopes = (jwt.scope ?? '').split(' ');
                 for (const scope of options.scopes) {
                     if (!userScopes.includes(scope)) {
                         throw new HTTPError(`Insufficient permissions: ${scope}`, EStatusCode.FORBIDDEN);

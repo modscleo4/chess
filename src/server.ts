@@ -38,14 +38,12 @@ config(server);
 providers(server);
 pipeline(server);
 cron(server);
-ws(server);
 
 const port = parseInt(process.env.PORT || '3000');
 
 await new Promise<void>((resolve, reject) => {
     server.listen(port).on('listening', async () => {
-        console.log(`Server is running on port ${port}`);
-
+        console.log(`Server is running on port ${port} in ${server.production ? 'production' : 'development'} mode`);
         await prisma.$connect();
         resolve();
     }).on('close', async () => {

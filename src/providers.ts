@@ -43,7 +43,7 @@ import OpenIDService from "@app/services/OpenIDService.js";
 
 export default function providers(server: Server): void {
     server.install(RouterServiceProviderFactory(router));
-    server.install(LoggerServiceProviderFactory(new ConsoleLogger({ colorsEnabled: true, minLevel: LogLevel.DEBUG })));
+    server.install(LoggerServiceProviderFactory(new ConsoleLogger({ formattingEnabled: true, minLevel: LogLevel.DEBUG })));
 
     // Add providers here
     // Recover the provider with app.services.get(ServiceProvider) in your handlers and middleware constructors

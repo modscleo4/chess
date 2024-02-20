@@ -59,7 +59,6 @@ export default function config(server: Server): void {
             enc: process.env.JWE_ENCRYPTION || 'A256GCM',
             secret: process.env.JWE_SECRET,
             privateKeyFile: process.env.JWE_PRIVATE_KEY,
-            ephemeralPrivateKeyFile: process.env.JWE_EPHEMERAL_KEY,
         },
     }));
 

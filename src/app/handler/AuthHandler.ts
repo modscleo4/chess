@@ -22,7 +22,7 @@ import { AuthServiceProvider, JWTServiceProvider } from "midori/providers";
 import { Payload } from "midori/util/jwt.js";
 import { generateUUID } from "midori/util/uuid.js";
 
-import UserDAO from "@core/dao/UserDAO.js";
+import { prisma } from "@core/lib/Prisma.js";
 
 import { OpenIDServiceProvider } from "@app/providers/OpenIDServiceProvider.js";
 import OpenIDService from "@app/services/OpenIDService.js";
@@ -95,11 +95,13 @@ export class Callback extends Handler {
 
         const OauthUser = await identity_response.json();
 
-        const user = await UserDAO.create({
-            id: generateUUID(),
-            username: OauthUser.preferred_username,
-            password: null,
-            email: OauthUser.email,
+        const user = await prisma.user.create({
+            data: {
+                id: generateUUID(),
+                username: OauthUser.preferred_username,
+                password: null,
+                email: OauthUser.email,
+            }
         });
 
         const issuedAt = Date.now();

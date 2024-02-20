@@ -20,7 +20,7 @@ import { Constructor } from "midori/util/types.js";
 import OpenIDService from "@app/services/OpenIDService.js";
 
 export abstract class OpenIDServiceProvider extends ServiceProvider<OpenIDService> {
-    static service: string = 'OpenID';
+    static override service: symbol = Symbol('OpenID');
 }
 
 export default function (openIDService: OpenIDService): Constructor<OpenIDServiceProvider> & { [K in keyof typeof OpenIDServiceProvider]: typeof OpenIDServiceProvider[K] } {

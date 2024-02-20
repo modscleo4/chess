@@ -19,7 +19,7 @@ import { ServiceProvider, Application } from 'midori/app';
 import GamesService from '@app/services/GamesService.js';
 
 export default class GamesServiceProvider extends ServiceProvider<GamesService> {
-    static service: string = 'ChessGames';
+    static override service: symbol = Symbol('ChessGames');
 
     register(app: Application): GamesService {
         return new GamesService();
